@@ -112,6 +112,10 @@ module Intacct
         if object.respond_to? :"intacct_#{type}d_at"
           object.send("intacct_#{type}d_at=", DateTime.now)
         end
+        #also update updated at on create
+        if type=="create" and object.respond_to?(:"intacct_updated_at")
+          object.intacct_updated_at = DateTime.now
+        end
       end
     end
   end
