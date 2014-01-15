@@ -89,6 +89,48 @@ module Intacct
       object.invoice.intacct_key = nil
     end
 
+    def get_employee_id
+      return if !customer_data
+
+      system = Intacct.system_name
+
+      #make sure we have all values
+      %w(commission_start_date commission_end_date employee).each do |field|
+        return unless customer_data.send("#{system}_#{field}").present?
+      end
+
+      #make sure valid time
+      return if Time.strptime(customer_data.send("#{system}_commission_start_date"),"%m/%d/%Y")>Time.now
+      return if Time.strptime(customer_data.send("#{system}_commission_end_date"),"%m/%d/%Y")<Time.now
+
+      customer_data.send("#{system}_employee")
+    end
+
+    def get_commission_amount
+      return if !customer_data
+
+      system = Intacct.system_name
+
+      #make sure we have all values
+      %w(commission_start_date commission_end_date employee commission_rate).each do |field|
+        return unless customer_data.send("#{system}_#{field}").present?
+      end
+
+      start_date = Time.strptime(customer_data.send("#{system}_commission_start_date"),"%m/%d/%Y")
+      end_date = Time.strptime(customer_data.send("#{system}_commission_end_date"),"%m/%d/%Y")
+
+      #make sure valid time
+      return if start_date>Time.now
+      return if end_date<Time.now
+
+      #need to covert from decimal to %
+      if start_date>1.year.ago #if within the first year
+        customer_data.send("#{system}_commission_rate").to_f*100
+      else #if in second year half the commission
+        (customer_data.send("#{system}_commission_rate").to_f*100)/2
+      end
+    end
+
     def set_date_time type
       if %w(create update delete).include? type
         if object.invoice.respond_to? :"intacct_#{type}d_at"

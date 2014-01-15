@@ -21,7 +21,19 @@ module Intacct
       fields = [
         :customerid,
         :name,
-        :termname
+        :termname,
+        :auto_employee,
+        :auto_commission_start_date,
+        :auto_commission_end_date,
+        :auto_commission_rate,
+        :property_employee,
+        :property_commission_start_date,
+        :property_commission_end_date,
+        :property_commission_rate,
+        :subro_employee,
+        :subro_commission_start_date,
+        :subro_commission_end_date,
+        :subro_commission_rate
       ] if fields.empty?
 
       send_xml('get') do |xml|
@@ -37,11 +49,12 @@ module Intacct
       end
 
       if successful?
-        @data = OpenStruct.new({
-          id: response.at("//customer//customerid").content,
-          name: response.at("//customer//name").content,
-          termname: response.at("//customer//termname").content
-        })
+        #get fields
+        get_fields = {}
+        fields.each do |field|
+          get_fields[field.to_sym] = response.at("//customer//#{field.to_s}").content
+        end
+        @data = OpenStruct.new(get_fields)
       end
 
       successful?

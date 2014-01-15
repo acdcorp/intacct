@@ -100,6 +100,7 @@ module Helpers
 
   def default_setup
     Intacct.setup do |config|
+      config.system_name  = 'auto'
       config.invoice_prefix  = 'AUTO-'
       config.bill_prefix     = 'AUTO-'
       config.customer_prefix = 'C'
