@@ -117,7 +117,7 @@ module Intacct
       end
 
       start_date = Time.strptime(customer_data.send("#{system}_commission_start_date"),"%m/%d/%Y")
-      end_date = Time.strptime(customer_data.send("#{system}_commission_end_date"),"%m/%d/%Y")
+      end_date = Time.strptime(customer_data.send("#{system}_commission_end_date"),"%m/%d/%Y")+1.day
 
       #make sure valid time
       return if start_date>Time.now
