@@ -54,6 +54,36 @@ module Intacct
       successful?
     end
 
+    def update updated_invoice = false
+      @object = updated_invoice if updated_invoice
+      return false unless object.invoice.intacct_key.present?
+
+      send_xml('update') do |xml|
+        xml.function(controlid: "1") {
+          xml.update_invoice(key: object.invoice.intacct_key) {
+            yield xml
+          }
+        }
+      end
+
+      successful?
+    end
+
+    def get_list limit=1000
+
+      # fields = [] if fields.empty?
+
+      send_xml('get_list') do |xml|
+        xml.function(controlid: "f1") {
+          xml.get_list(object: "invoice", maxitems: limit) {
+            yield xml
+          }
+        }
+      end
+
+      successful?
+    end
+
     def intacct_object_id
       "#{intacct_invoice_prefix}#{object.invoice.id}"
     end

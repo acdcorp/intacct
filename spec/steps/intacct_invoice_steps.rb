@@ -36,6 +36,12 @@ module IntacctInvoiceSteps
     end
   end
 
+  step 'I use the #get_list method' do
+    intacct_inv = Intacct::Invoice.new
+    @response = intacct_inv.get_list(3) do |xml|
+      end
+  end
+
   def custom_fields_for_auto
     Intacct::Invoice.class_eval do
       custom_invoice_fields do |xml|

@@ -4,7 +4,7 @@ module Intacct
     include Hooks::InstanceHooks
 
     define_hook :after_create, :after_update, :after_delete,
-      :after_get, :after_send_xml, :on_error, :before_create
+      :after_get, :after_get_list, :after_send_xml, :on_error, :before_create
 
     after_create :set_intacct_system_id
     after_delete :delete_intacct_system_id
@@ -58,7 +58,7 @@ module Intacct
       @response = Nokogiri::XML(res.body)
 
       if successful?
-        if key = response.at('//result//key')
+        if key = response.at('//result/key')
           set_intacct_key key.content
         end
 

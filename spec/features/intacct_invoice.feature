@@ -12,6 +12,7 @@ Feature: Intacct Invoice
     Then I should recieve a sucessfull response
 
     Examples:
-      | method  |
-      | create  |
-      | delete |
+      | method    |
+      | create    |
+      | delete    |
+      | get_list  |
