@@ -50,6 +50,7 @@ module Intacct
       #[todo] - Custom
       xml.vendtype "Appraiser"
       xml.taxid object.tax_id
+      xml.paymethod "ACH" if object.ach_routing_number.present?
       xml.billingtype "balanceforward"
       xml.status "active"
       xml.contactinfo {
@@ -74,6 +75,7 @@ module Intacct
         }
       }
       if object.ach_routing_number.present?
+        xml.paymentnotify "true"
         xml.achenabled "#{object.ach_routing_number.present? ? "true" : "false"}"
         xml.achbankroutingnumber object.ach_routing_number
         xml.achaccountnumber object.ach_account_number
