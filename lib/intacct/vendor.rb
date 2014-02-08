@@ -49,7 +49,7 @@ module Intacct
       xml.name "#{object.company_name.present? ? object.company_name : object.full_name}"
       #[todo] - Custom
       xml.vendtype "Appraiser"
-      xml.taxid object.tax_id
+      xml.taxid object.tax_number
       xml.paymethod "ACH" if object.ach_routing_number.present?
       xml.billingtype "balanceforward"
       xml.status "active"
