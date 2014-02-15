@@ -39,7 +39,31 @@ module Intacct
         }
       end
 
-      successful?
+      success = successful?
+
+      return true if success
+
+      if !success
+        #this invoice already exists... lets grab it and force update
+        if resp = @response.at('//result//errorno') and resp.content == "PL01000127"
+          intacct_invoice_list = Intacct::Invoice.new
+          intacct_invoice_list.get_list(1) do |xml|
+            xml.filter {
+              xml.expression {
+                xml.field "invoiceno"
+                xml.operator "="
+                xml.value intacct_object_id
+              }
+            }
+          end
+          if intacct_invoice_list.response and invoice_key = intacct_invoice_list.response.at("//invoice/key").content
+            set_intacct_key invoice_key
+            run_hook :after_send_xml, "create"
+            run_hook :after_create
+            return true
+          end
+        end
+      end
     end
 
     def delete

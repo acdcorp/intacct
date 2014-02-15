@@ -25,6 +25,15 @@ module IntacctInvoiceSteps
     @intacct_invoice.object.vendor.intacct_system_id = nil
     @response = @intacct_invoice.create
     IntacctInvoiceSteps.intacct_key = @intacct_invoice.object.invoice.intacct_key
+
+    @intacct_invoice2 = Intacct::Invoice.new({
+      invoice: invoice,
+      customer: customer,
+      vendor: vendor
+    })
+    @intacct_invoice2.object.invoice.intacct_system_id = nil
+    @response2 = @intacct_invoice2.create
+
   end
 
   step 'I use the #delete method' do
