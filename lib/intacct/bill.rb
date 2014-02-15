@@ -32,7 +32,33 @@ module Intacct
         }
       end
 
-      successful?
+      success = successful?
+
+      return true if success
+
+      if !success
+        #this invoice already exists... lets grab it and force update
+        if resp = @response.at('//result//errorno') and resp.content == "PL01000127"
+          intacct_bill_list = Intacct::Bill.new
+          intacct_bill_list.get_list(1) do |xml|
+            xml.filter {
+              xml.expression {
+                xml.field "billno"
+                xml.operator "="
+                xml.value intacct_object_id
+              }
+            }
+          end
+          if intacct_bill_list.response and bill_key = intacct_bill_list.response.at("//bill/key").content
+            set_intacct_key bill_key
+            run_hook :after_send_xml, "create"
+            run_hook :after_create
+            return true
+          end
+        end
+      end
+
+      success
     end
 
     def delete
@@ -41,6 +67,19 @@ module Intacct
       send_xml('delete') do |xml|
         xml.function(controlid: "1") {
           xml.delete_bill(externalkey: "false", key: object.payment.intacct_key)
+        }
+      end
+
+      successful?
+    end
+
+    def get_list limit=1000
+
+      send_xml('get_list') do |xml|
+        xml.function(controlid: "f1") {
+          xml.get_list(object: "bill", maxitems: limit) {
+            yield xml
+          }
         }
       end
 

@@ -7,7 +7,7 @@ Feature: Intacct Bill
     And I have an payment, customer and vendor
     Then I create an Intacct Bill object
 
-  Scenario Outline: It should "CRUD" an invoice in Intacct
+  Scenario Outline: It should "CRUD" a bill in Intacct
     Given I use the #<method> method
     Then I should recieve a sucessfull response
 

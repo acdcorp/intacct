@@ -25,6 +25,15 @@ module IntacctBillSteps
     @intacct_bill.object.vendor.intacct_system_id = nil
     @response = @intacct_bill.create
     IntacctBillSteps.intacct_key = @intacct_bill.object.payment.intacct_key
+
+    @intacct_bill2 = Intacct::Bill.new({
+      payment: payment,
+      customer: customer,
+      vendor: vendor
+    })
+    @intacct_bill2.object.payment.intacct_system_id = nil
+    @response2 = @intacct_bill2.create
+
   end
 
   step 'I use the #delete method' do
