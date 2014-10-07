@@ -46,7 +46,7 @@ module Intacct
     end
 
     def vendor_xml xml
-      xml.name "#{object.company_name.present? ? object.company_name : object.full_name} - #{object.id}"
+      xml.name "#{object.company_name.present? ? object.company_name : object.full_name} (#{object.id})"
       #[todo] - Custom
       xml.vendtype "Appraiser"
       xml.taxid object.tax_number
@@ -56,7 +56,7 @@ module Intacct
       xml.contactinfo {
         xml.contact {
           xml.contactname "#{object.last_name}, #{object.first_name} (#{object.id})"
-          xml.printas object.full_name
+          xml.printas "#{object.full_name} (#{object.id})"
           xml.companyname object.company_name
           xml.firstname object.first_name
           xml.lastname object.last_name
