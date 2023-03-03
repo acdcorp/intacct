@@ -3,6 +3,7 @@ require 'net/http'
 require 'nokogiri'
 require 'hooks'
 require "intacct/base"
+require "intacct/error"
 require "intacct/customer"
 require "intacct/vendor"
 require "intacct/invoice"
