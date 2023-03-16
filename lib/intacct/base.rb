@@ -52,9 +52,10 @@ module Intacct
       @sent_xml = xml
 
       url = "https://www.intacct.com/ia/xml/xmlgw.phtml"
+      url = "http://localhost:3010/xml_documents.xml"
       uri = URI(url)
 
-      res = Net::HTTP.post_form(uri, 'xmlrequest' => xml)
+      res = Net::HTTP.post_form(uri, 'xmlrequest' => xml, 'xml_document' => xml, 'name' => 'intacct')
       @response = Nokogiri::XML(res.body)
 
       if successful?
