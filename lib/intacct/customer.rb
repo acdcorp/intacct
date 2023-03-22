@@ -91,7 +91,7 @@ module Intacct
     end
 
     def intacct_object_id
-      "#{intacct_customer_prefix}#{object.id}"
+      "#{intacct_customer_prefix}#{object.legacy.legacy_id}"
     end
   end
 end

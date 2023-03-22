@@ -89,7 +89,7 @@ module Intacct
     end
 
     def intacct_object_id
-      "#{intacct_bill_prefix}#{object.payment.id}"
+      "#{intacct_bill_prefix}#{object.payment.legacy.legacy_id}"
     end
 
     def bill_xml xml

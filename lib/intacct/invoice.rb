@@ -115,7 +115,7 @@ module Intacct
     end
 
     def intacct_object_id
-      "#{intacct_invoice_prefix}#{object.invoice.id}"
+      "#{intacct_invoice_prefix}#{object.invoice.legacy.legacy_id}"
     end
 
     def invoice_xml xml
