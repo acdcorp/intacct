@@ -79,8 +79,8 @@ module Intacct
         xml.achenabled "#{object.routing_number.present? ? "true" : "false"}"
         xml.achbankroutingnumber object.routing_number
         xml.achaccountnumber object.account_number
-        xml.achaccounttype "#{object.account_type.capitalize+" Account"}"
-        xml.achremittancetype "#{(object.account_classification=="business" ? "CCD" : "PPD")}"
+        xml.achaccounttype "#{object.account_type.to_s.capitalize} Account"
+        xml.achremittancetype "#{(object.account_classification.to_s=="business" ? "CCD" : "PPD")}"
       end
     end
   end
