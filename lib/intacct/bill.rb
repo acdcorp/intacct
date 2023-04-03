@@ -10,7 +10,8 @@ module Intacct
       unless object.customer.intacct_system_id
         intacct_customer = Intacct::Customer.new object.customer
         unless intacct_customer.create
-          raise 'Could not grab Intacct customer data'
+          raise Intacct::Error.new message: 'Could not grab Intacct customer data',
+            sent_xml: intacct_customer.sent_xml, response: intacct_customer.response
         end
       end
 
@@ -20,7 +21,8 @@ module Intacct
         if intacct_vendor.create
           object.vendor = intacct_vendor.object
         else
-          raise 'Could not create vendor'
+          raise Intacct::Error.new message: 'Could not create vendor',
+            sent_xml: intacct_vendor.sent_xml, response: intacct_vendor.response
         end
       end
 
