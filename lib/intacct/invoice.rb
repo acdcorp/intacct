@@ -84,6 +84,8 @@ module Intacct
       unless successful?
         raise Intacct::Error.new message: 'Could not delete invoice',
           sent_xml: sent_xml, response: response
+      else
+        successful?
       end
     end
 
