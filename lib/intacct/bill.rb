@@ -89,7 +89,7 @@ module Intacct
     end
 
     def intacct_object_id
-      "#{intacct_bill_prefix}#{object.payment.id}"
+      "#{intacct_bill_prefix}#{object.payment.legacy.legacy_id}"
     end
 
     def bill_xml xml
@@ -105,9 +105,9 @@ module Intacct
         xml.day object.payment.created_at.strftime("%d")
       }
       xml.datedue {
-        xml.year object.payment.paid_at.strftime("%Y")
-        xml.month object.payment.paid_at.strftime("%m")
-        xml.day object.payment.paid_at.strftime("%d")
+        xml.year object.payment.created_at.strftime("%Y")
+        xml.month object.payment.created_at.strftime("%m")
+        xml.day object.payment.created_at.strftime("%d")
       }
       run_hook :custom_bill_fields, xml
       run_hook :bill_item_fields, xml

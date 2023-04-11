@@ -52,6 +52,7 @@ module Intacct
         #get fields
         get_fields = {}
         fields.each do |field|
+          puts field.inspect
           get_fields[field.to_sym] = response.at("//customer//#{field.to_s}").content
         end
         @data = OpenStruct.new(get_fields)
@@ -90,7 +91,7 @@ module Intacct
     end
 
     def intacct_object_id
-      "#{intacct_customer_prefix}#{object.id}"
+      "#{intacct_customer_prefix}#{object.legacy.legacy_id}"
     end
   end
 end

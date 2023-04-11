@@ -42,22 +42,22 @@ module Intacct
     end
 
     def intacct_object_id
-      "#{intacct_vendor_prefix}#{object.id}"
+      "#{intacct_vendor_prefix}#{object.legacy.legacy_id}"
     end
 
     def vendor_xml xml
-      xml.name "#{object.company_name.present? ? object.company_name : object.full_name}"
+      xml.name object.carrier.name
       #[todo] - Custom
       xml.vendtype "Appraiser"
-      xml.taxid object.tax_number
-      xml.paymethod "ACH" if object.ach_routing_number.present?
+      xml.taxid object.tax
+      xml.paymethod "ACH" if object.routing_number.present?
       xml.billingtype "balanceforward"
       xml.status "active"
       xml.contactinfo {
         xml.contact {
           xml.contactname "#{object.last_name}, #{object.first_name} (#{object.id})"
           xml.printas object.full_name
-          xml.companyname object.company_name
+          xml.companyname object.carrier.name
           xml.firstname object.first_name
           xml.lastname object.last_name
           xml.phone1 object.business_phone
@@ -65,8 +65,8 @@ module Intacct
           xml.email1 object.email
           if object.billing_address.present?
             xml.mailaddress {
-              xml.address1 object.billing_address.address1
-              xml.address2 object.billing_address.address2
+              xml.address1 object.billing_address.line_1
+              xml.address2 object.billing_address.line_2
               xml.city object.billing_address.city
               xml.state object.billing_address.state
               xml.zip object.billing_address.zipcode
@@ -74,13 +74,13 @@ module Intacct
           end
         }
       }
-      if object.ach_routing_number.present?
+      if object.routing_number.present?
         xml.paymentnotify "true"
-        xml.achenabled "#{object.ach_routing_number.present? ? "true" : "false"}"
-        xml.achbankroutingnumber object.ach_routing_number
-        xml.achaccountnumber object.ach_account_number
-        xml.achaccounttype "#{object.ach_account_type.capitalize+" Account"}"
-        xml.achremittancetype "#{(object.ach_account_classification=="business" ? "CCD" : "PPD")}"
+        xml.achenabled "#{object.routing_number.present? ? "true" : "false"}"
+        xml.achbankroutingnumber object.routing_number
+        xml.achaccountnumber object.account_number
+        xml.achaccounttype "#{object.account_type.to_s.capitalize} Account"
+        xml.achremittancetype "#{(object.account_classification.to_s=="business" ? "CCD" : "PPD")}"
       end
     end
   end
