@@ -72,7 +72,10 @@ module Intacct
         }
       end
 
-      successful?
+      unless successful?
+        raise Intacct::Error.new message: 'Could not delete payment',
+          sent_xml: sent_xml, response: response
+      end
     end
 
     def get_list limit=1000

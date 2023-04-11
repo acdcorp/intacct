@@ -25,7 +25,8 @@ module Intacct
   attr_accessor :xml_sender_id  , :xml_password    ,
                 :app_user_id    , :app_company_id  , :app_password ,
                 :invoice_prefix , :bill_prefix     ,
-                :vendor_prefix  , :customer_prefix, :system_name
+                :vendor_prefix  , :customer_prefix, :system_name,
+                :service_url
 
   def setup
     yield self

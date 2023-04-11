@@ -51,7 +51,7 @@ module Intacct
       xml = builder.doc.root.to_xml
       @sent_xml = xml
 
-      url = "https://www.intacct.com/ia/xml/xmlgw.phtml"
+      url = Intacct.service_url || "https://www.intacct.com/ia/xml/xmlgw.phtml"
       uri = URI(url)
 
       res = Net::HTTP.post_form(uri, 'xmlrequest' => xml)
