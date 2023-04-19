@@ -7,7 +7,7 @@ class Intacct::Error < StandardError
     response.traverse do |n|
       error_description = n.content if n.name == 'description'
     end
-    @response = if error_description
+    @response = unless error_description.blank?
                   error_description
                 else
                   response

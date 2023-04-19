@@ -118,5 +118,6 @@ module Intacct
         end
       end
     end
+
   end
 end
