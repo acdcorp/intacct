@@ -18,6 +18,10 @@ module Intacct
       super(*params)
     end
 
+    def record_error?
+      @record_error
+    end
+
     private
 
     def send_xml action

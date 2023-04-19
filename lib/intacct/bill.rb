@@ -4,17 +4,13 @@ module Intacct
     define_hook :custom_bill_fields, :bill_item_fields
 
     def create
-      return false if object.payment.intacct_system_id.present?
+      return Intacct::Error.new(message: 'Bill already created on intacct') if object.payment.intacct_system_id.present?
 
       # Need to create the customer if one doesn't exist
       unless object.customer.intacct_system_id
         intacct_customer = Intacct::Customer.new object.customer
         intacct_customer.create
         object.customer = intacct_customer.object
-        #unless intacct_customer.create
-        #  raise Intacct::Error.new message: 'Could not grab Intacct customer data',
-        #    sent_xml: intacct_customer.sent_xml, response: intacct_customer.response
-        #end
       end
 
       # Create vendor if we have one and not in Intacct
@@ -22,12 +18,6 @@ module Intacct
         intacct_vendor = Intacct::Vendor.new object.vendor
         intacct_vendor.create
         object.vendor = intacct_vendor.object
-        #if intacct_vendor.create
-        #  object.vendor = intacct_vendor.object
-        #else
-        #  raise Intacct::Error.new message: 'Could not create vendor',
-        #    sent_xml: intacct_vendor.sent_xml, response: intacct_vendor.response
-        #end
       end
 
       send_xml('create') do |xml|
@@ -76,12 +66,7 @@ module Intacct
         }
       end
 
-      unless successful?
-        raise Intacct::Error.new message: 'Could not delete payment',
-          sent_xml: sent_xml, response: response
-      else
-        successful?
-      end
+      successful?
     end
 
     def get_list limit=1000

@@ -4,41 +4,24 @@ module Intacct
     define_hook :custom_invoice_fields
 
     def create
-      return false if object.invoice.intacct_system_id.present?
+      raise Intacct::Error.new(message: 'Invoice already created on intacct') if object.invoice.intacct_system_id.present?
 
       # Need to create the customer if one doesn't exist
       intacct_customer = Intacct::Customer.new object.customer
       unless object.customer.intacct_system_id.present?
         intacct_customer.create
         object.customer = intacct_customer.object
-        #unless intacct_customer.create
-          #puts intacct_customer.inspect
-          #raise Intacct::Error.new message: 'Could not create customer',
-          #  sent_xml: intacct_customer.sent_xml, response: intacct_customer.response
-          #raise 'Could not create customer'
-        #end
       end
 
       if intacct_customer.get
         object.customer = intacct_customer.object
         @customer_data = intacct_customer.data
       end
-      #else
-      #  raise Intacct::Error.new message: 'Could not grab Intacct customer data',
-      #      sent_xml: intacct_customer.sent_xml, response: intacct_customer.response
-      #end
 
-      # Create vendor if we have one and not in Intacct
       if object.vendor and object.vendor.intacct_system_id.blank?
         intacct_vendor = Intacct::Vendor.new object.vendor
         intacct_vendor.create
         object.vendor = intacct_vendor.object
-        #if intacct_vendor.create
-        #  object.vendor = intacct_vendor.object
-        #else
-        #  raise Intacct::Error.new message: 'Could not create vendor',
-        #    sent_xml: intacct_vendor.sent_xml, response: intacct_vendor.response
-        #end
       end
 
       send_xml('create') do |xml|
@@ -87,12 +70,7 @@ module Intacct
         }
       end
 
-      unless successful?
-        raise Intacct::Error.new message: 'Could not delete invoice',
-          sent_xml: sent_xml, response: response
-      else
-        successful?
-      end
+      successful?
     end
 
     def update updated_invoice = false
