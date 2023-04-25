@@ -52,7 +52,7 @@ module Intacct
         #get fields
         get_fields = {}
         fields.each do |field|
-          get_fields[field.to_sym] = response.at("//customer//#{field.to_s}").content
+          get_fields[field.to_sym] = response.at("//customer//#{field.to_s}")&.content
         end
         @data = OpenStruct.new(get_fields)
       end

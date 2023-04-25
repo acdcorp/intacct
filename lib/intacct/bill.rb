@@ -7,10 +7,15 @@ module Intacct
       return Intacct::Error.new(message: 'Bill already created on intacct') if object.payment.intacct_system_id.present?
 
       # Need to create the customer if one doesn't exist
-      unless object.customer.intacct_system_id
-        intacct_customer = Intacct::Customer.new object.customer
+      intacct_customer = Intacct::Customer.new object.customer
+      unless object.customer.intacct_system_id.present?
         intacct_customer.create
         object.customer = intacct_customer.object
+      end
+
+      if intacct_customer.get
+        object.customer = intacct_customer.object
+        @customer_data = intacct_customer.data
       end
 
       # Create vendor if we have one and not in Intacct
