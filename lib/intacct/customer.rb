@@ -38,7 +38,7 @@ module Intacct
 
       send_xml('get') do |xml|
         xml.function(controlid: "f4") {
-          xml.get(object: "customer", key: "#{intacct_system_id}") {
+          xml.get(object: "customer", key: "#{object.intacct_system_id}") {
             xml.fields {
               fields.each do |field|
                 xml.field field.to_s
@@ -66,7 +66,7 @@ module Intacct
 
       send_xml('update') do |xml|
         xml.function(controlid: "1") {
-          xml.update_customer(customerid: intacct_system_id) {
+          xml.update_customer(customerid: object.intacct_system_id) {
             xml.name object.name
             xml.comments
             xml.status "active"
@@ -82,7 +82,7 @@ module Intacct
 
       @response = send_xml('delete') do |xml|
         xml.function(controlid: "1") {
-          xml.delete_customer(customerid: intacct_system_id)
+          xml.delete_customer(customerid: object.intacct_system_id)
         }
       end
 
