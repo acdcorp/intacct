@@ -81,8 +81,8 @@ module Intacct
       if object.ach_routing_number.present?
         xml.paymentnotify "true"
         xml.achenabled "#{object.ach_routing_number.present? ? "true" : "false"}"
-        xml.achbankroutingnumber object.ach_routing_number
-        xml.achaccountnumber object.ach_account_number
+        xml.achbankroutingnumber object.ach_routing_number.to_i
+        xml.achaccountnumber object.ach_account_number.to_i
         xml.achaccounttype "#{object.ach_account_type.capitalize+" Account"}"
         xml.achremittancetype "#{(object.ach_account_classification=="business" ? "CCD" : "PPD")}"
       end
