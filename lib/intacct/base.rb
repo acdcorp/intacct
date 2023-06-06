@@ -18,6 +18,10 @@ module Intacct
       super(*params)
     end
 
+    def record_error?
+      @record_error
+    end
+
     private
 
     def send_xml action
@@ -51,7 +55,7 @@ module Intacct
       xml = builder.doc.root.to_xml
       @sent_xml = xml
 
-      url = "https://www.intacct.com/ia/xml/xmlgw.phtml"
+      url = Intacct.service_url || "https://www.intacct.com/ia/xml/xmlgw.phtml"
       uri = URI(url)
 
       res = Net::HTTP.post_form(uri, 'xmlrequest' => xml)
@@ -118,5 +122,6 @@ module Intacct
         end
       end
     end
+
   end
 end
