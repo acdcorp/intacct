@@ -1,7 +1,7 @@
 class Intacct::Error < StandardError
   attr_reader :sent_xml, :response
 
-  def initialize(message: 'Generic instant error', sent_xml: nil, response: [])
+  def initialize(message: 'Generic instant error', sent_xml: nil, response: Nokogiri::XML::Builder.new)
     error_description = nil
     @sent_xml = Nokogiri::XML(sent_xml)
     response.traverse do |n|
