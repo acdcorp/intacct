@@ -8,8 +8,6 @@ require "intacct/customer"
 require "intacct/vendor"
 require "intacct/invoice"
 require "intacct/bill"
-require "intacct/api"
-require "intacct/response"
 
 class Object
   def blank?
