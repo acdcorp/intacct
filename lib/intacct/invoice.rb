@@ -18,7 +18,7 @@ module Intacct
         @customer_data = intacct_customer.data
       end
 
-      if object.vendor and object.vendor.intacct_system_id.blank?
+      if object.vendor && object.vendor.intacct_system_id.blank?
         intacct_vendor = Intacct::Vendor.new object.vendor
         intacct_vendor.create
         object.vendor = intacct_vendor.object

@@ -6,11 +6,10 @@ module Intacct
           xml.send("create_customer") {
             xml.customerid intacct_object_id
             xml.name object.name
-            xml.comments
             xml.status "active"
           }
         }
-      end
+     end
 
       successful?
     end
