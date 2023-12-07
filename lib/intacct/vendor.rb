@@ -20,7 +20,7 @@ module Intacct
 
       send_xml('update') do |xml|
         xml.function(controlid: "1") {
-          xml.update_vendor(vendorid: intacct_system_id) {
+          xml.update_vendor(vendorid: object.intacct_system_id) {
             vendor_xml xml
           }
         }
@@ -34,13 +34,17 @@ module Intacct
 
       @response = send_xml('delete') do |xml|
         xml.function(controlid: "1") {
-          xml.delete_vendor(vendorid: intacct_system_id)
+          xml.delete_vendor(vendorid: object.intacct_system_id)
         }
       end
 
       successful?
     end
 
+    # Use to create the object, this is set to the record after create in
+    # intacct.
+    # after create object we rely on object intacct_system_id
+    # allowing us to use old records
     def intacct_object_id
       "#{intacct_vendor_prefix}#{object.id}"
     end
@@ -77,8 +81,8 @@ module Intacct
       if object.ach_routing_number.present?
         xml.paymentnotify "true"
         xml.achenabled "#{object.ach_routing_number.present? ? "true" : "false"}"
-        xml.achbankroutingnumber object.ach_routing_number
-        xml.achaccountnumber object.ach_account_number
+        xml.achbankroutingnumber object.ach_routing_number.to_i
+        xml.achaccountnumber object.ach_account_number.to_i
         xml.achaccounttype "#{object.ach_account_type.capitalize+" Account"}"
         xml.achremittancetype "#{(object.ach_account_classification=="business" ? "CCD" : "PPD")}"
       end
