@@ -11,9 +11,10 @@ module Intacct
       unless object.customer.intacct_system_id.present?
         intacct_customer.create
         object.customer = intacct_customer.object
+        @customer_data = intacct_customer.data
       end
 
-      if intacct_customer.get
+      if @customer_data.nil? && intacct_customer.get
         object.customer = intacct_customer.object
         @customer_data = intacct_customer.data
       end
