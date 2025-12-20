@@ -11,6 +11,7 @@ module Intacct
       unless object.customer.intacct_system_id.present?
         intacct_customer.create
         object.customer = intacct_customer.object
+        intacct_customer = Intacct::Customer.new object.customer
         @customer_data = intacct_customer.data
       end
 
