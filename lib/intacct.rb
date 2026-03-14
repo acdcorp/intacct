@@ -3,25 +3,14 @@ require 'net/http'
 require 'nokogiri'
 require 'hooks'
 require 'logger'
+require 'active_support/core_ext/object/blank'
 require "intacct/base"
 require "intacct/error"
 require "intacct/customer"
 require "intacct/vendor"
 require "intacct/invoice"
 require "intacct/bill"
-
-warn "[DEPRECATION] Intacct gem (v0.0.3): Object#blank?/present? will be removed in v0.1.0. " \
-     "Require 'active_support/core_ext/object/blank' instead." unless defined?(ActiveSupport)
-
-class Object
-  def blank?
-    respond_to?(:empty?) ? empty? : !self
-  end
-
-  def present?
-    !blank?
-  end
-end
+require "intacct/resource_config"
 
 module Intacct
   extend self
@@ -35,7 +24,10 @@ module Intacct
                 :http_open_timeout, :http_read_timeout
 
   def setup
-    yield self
+    config = ResourceConfig.new
+    yield config
+    config.apply!
+    config
   end
 
   def logger

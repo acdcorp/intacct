@@ -1,7 +1,7 @@
 require 'securerandom'
 
 module Intacct
-  class Base < Struct.new(:object, :current_user)
+  class Base
     include Hooks
     include Hooks::InstanceHooks
 
@@ -13,11 +13,12 @@ module Intacct
     after_delete :delete_intacct_key
     after_send_xml :set_date_time
 
-    attr_accessor :response, :data, :sent_xml, :intacct_action
+    attr_accessor :object, :current_user, :response, :data, :sent_xml, :intacct_action
 
-    def initialize *params
-      params[0] = OpenStruct.new(params[0]) if params[0].is_a? Hash
-      super(*params)
+    def initialize(*params)
+      params[0] = OpenStruct.new(params[0]) if params[0].is_a?(Hash)
+      @object       = params[0]
+      @current_user = params[1]
     end
 
     def record_error?
