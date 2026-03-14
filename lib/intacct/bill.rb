@@ -74,12 +74,21 @@ module Intacct
       successful?
     end
 
-    def get_list limit=1000
+    def self.list(limit: 1000, &filter)
+      instance = new
+      found = instance.get_list(limit, &filter)
+      QueryResult.new(
+        records:  found ? instance.response.xpath('//result/data//bill') : nil,
+        response: instance.response,
+        sent_xml: instance.sent_xml
+      )
+    end
 
+    def get_list(limit = 1000, &filter)
       send_xml('get_list') do |xml|
         xml.function(controlid: "f1") {
           xml.get_list(object: "bill", maxitems: limit) {
-            yield xml
+            filter.call(xml)
           }
         }
       end

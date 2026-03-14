@@ -6,6 +6,7 @@ require 'logger'
 require 'active_support/core_ext/object/blank'
 require "intacct/base"
 require "intacct/error"
+require "intacct/query_result"
 require "intacct/customer"
 require "intacct/vendor"
 require "intacct/invoice"

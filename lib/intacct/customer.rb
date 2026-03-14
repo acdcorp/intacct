@@ -14,7 +14,18 @@ module Intacct
       successful?
     end
 
-    def get *fields
+    def self.find(id:, fields: [])
+      stub = OpenStruct.new(intacct_system_id: id)
+      instance = new(stub)
+      instance.get(fields)
+      QueryResult.new(
+        data:     instance.data,
+        response: instance.response,
+        sent_xml: instance.sent_xml
+      )
+    end
+
+    def get(fields = [])
       return false unless object.intacct_system_id.present?
 
       if fields.empty?
@@ -50,7 +61,6 @@ module Intacct
       end
 
       if successful?
-        #get fields
         get_fields = {}
         fields.each do |field|
           get_fields[field.to_sym] = response.at("//customer//#{field.to_s}")&.content
