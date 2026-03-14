@@ -1,3 +1,5 @@
+require 'securerandom'
+
 module Intacct
   class Base < Struct.new(:object, :current_user)
     include Hooks
@@ -22,6 +24,10 @@ module Intacct
       @record_error
     end
 
+    def default_control_id
+      "#{self.class.name.split('::').last.upcase}-#{SecureRandom.hex(6)}"
+    end
+
     private
 
     def send_xml action
@@ -33,7 +39,7 @@ module Intacct
           xml.control {
             xml.senderid Intacct.xml_sender_id
             xml.password Intacct.xml_password
-            xml.controlid "INVOICE XML"
+            xml.controlid default_control_id
             xml.uniqueid "false"
             xml.dtdversion "2.1"
           }
@@ -58,7 +64,15 @@ module Intacct
       url = Intacct.service_url || "https://www.intacct.com/ia/xml/xmlgw.phtml"
       uri = URI(url)
 
-      res = Net::HTTP.post_form(uri, 'xmlrequest' => xml)
+      Intacct.logger.debug { "[Intacct] POST #{url} action=#{intacct_action}" }
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = uri.scheme == 'https'
+      http.open_timeout = Intacct.http_open_timeout || 5
+      http.read_timeout  = Intacct.http_read_timeout  || 30
+      request = Net::HTTP::Post.new(uri)
+      request.set_form_data('xmlrequest' => xml)
+      res = http.request(request)
+      Intacct.logger.debug { "[Intacct] response status=#{res.code}" }
       @response = Nokogiri::XML(res.body)
 
       if successful?

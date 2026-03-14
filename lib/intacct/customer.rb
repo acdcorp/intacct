@@ -17,23 +17,25 @@ module Intacct
     def get *fields
       return false unless object.intacct_system_id.present?
 
-      fields = [
-        :customerid,
-        :name,
-        :termname,
-        :auto_employee,
-        :auto_commission_start_date,
-        :auto_commission_end_date,
-        :auto_commission_rate,
-        :property_employee,
-        :property_commission_start_date,
-        :property_commission_end_date,
-        :property_commission_rate,
-        :subro_employee,
-        :subro_commission_start_date,
-        :subro_commission_end_date,
-        :subro_commission_rate
-      ] if fields.empty?
+      if fields.empty?
+        fields = Intacct.customer_fields || [
+          :customerid,
+          :name,
+          :termname,
+          :auto_employee,
+          :auto_commission_start_date,
+          :auto_commission_end_date,
+          :auto_commission_rate,
+          :property_employee,
+          :property_commission_start_date,
+          :property_commission_end_date,
+          :property_commission_rate,
+          :subro_employee,
+          :subro_commission_start_date,
+          :subro_commission_end_date,
+          :subro_commission_rate
+        ]
+      end
 
       send_xml('get') do |xml|
         xml.function(controlid: "f4") {
