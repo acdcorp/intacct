@@ -6,8 +6,8 @@ require 'intacct/version'
 Gem::Specification.new do |spec|
   spec.name          = "intacct"
   spec.version       = Intacct::VERSION
-  spec.authors       = ["Bernardo Espinoza"]
-  spec.email         = ["bernardo466@gmail.com"]
+  spec.authors       = ['CJ Lazell', 'Bernardo Espinoza']
+  spec.email         = ['cjlazell@gmail.com', 'bernardo466@gmail.com']
   spec.description   = %q{Ruby lib to communicate with the Intacct API system.}
   spec.summary       = %q{Ruby Intacct API Client}
   spec.homepage      = ""
@@ -21,12 +21,13 @@ Gem::Specification.new do |spec|
   spec.add_dependency "nokogiri"
   spec.add_dependency "hooks"
   spec.add_dependency "activesupport", ">= 6.0"
-  spec.add_development_dependency "bundler", "~> 1.3"
+  spec.add_development_dependency "bundler", ">= 1.3"
   spec.add_development_dependency "rake"
-  spec.add_development_dependency "rspec"
+  spec.add_development_dependency "rspec", ">= 3.10"
   spec.add_development_dependency "turnip"
   spec.add_development_dependency "awesome_print"
   spec.add_development_dependency "pry"
   spec.add_development_dependency "dotenv-rails"
   spec.add_development_dependency "faker", ">=1.2.0"
+  spec.add_development_dependency "webmock"
 end

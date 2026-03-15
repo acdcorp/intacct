@@ -1,4 +1,5 @@
 require "intacct/version"
+require 'ostruct'
 require 'net/http'
 require 'nokogiri'
 require 'hooks'
@@ -37,5 +38,9 @@ module Intacct
 
   def logger=(log)
     @logger = log
+  end
+
+  def ping
+    Base.ping
   end
 end

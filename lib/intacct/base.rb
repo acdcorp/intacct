@@ -15,6 +15,18 @@ module Intacct
 
     attr_accessor :object, :current_user, :response, :data, :sent_xml, :intacct_action
 
+    def self.ping
+      instance = new
+      instance.send(:send_xml, 'get_list') do |xml|
+        xml.function(controlid: 'ping') {
+          xml.get_list(object: 'customer', maxitems: 1)
+        }
+      end
+      instance.send(:successful?)
+    rescue
+      false
+    end
+
     def initialize(*params)
       params[0] = OpenStruct.new(params[0]) if params[0].is_a?(Hash)
       @object       = params[0]
