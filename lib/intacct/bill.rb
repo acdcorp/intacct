@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Intacct
   class Bill < Intacct::Base
     attr_accessor :customer_data
@@ -88,7 +90,7 @@ module Intacct
     end
 
     def intacct_object_id
-      "#{intacct_bill_prefix}#{object.payment.id}"
+      object.payment.intacct_object_id || "#{intacct_bill_prefix}#{object.payment.id}"
     end
 
     def bill_xml xml

@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 module Intacct
   class Invoice < Intacct::Base
     attr_accessor :customer_data
@@ -106,7 +107,7 @@ module Intacct
     end
 
     def intacct_object_id
-      "#{intacct_invoice_prefix}#{object.invoice.id}"
+      object.invoice.intacct_object_id || "#{intacct_invoice_prefix}#{object.invoice.id}"
     end
 
     def invoice_xml xml
