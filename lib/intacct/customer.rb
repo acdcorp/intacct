@@ -1,35 +1,21 @@
 # frozen_string_literal: true
 module Intacct
   class Customer < Intacct::Base
-    DEFAULT_CUSTOMER_FIELDS = [
-      :customerid,
-      :name,
-      :termname,
-      :auto_employee,
-      :auto_commission_start_date,
-      :auto_commission_end_date,
-      :auto_commission_rate,
-      :property_employee,
-      :property_commission_start_date,
-      :property_commission_end_date,
-      :property_commission_rate,
-      :subro_employee,
-      :subro_commission_start_date,
-      :subro_commission_end_date,
-      :subro_commission_rate
-    ].freeze
-
+    define_hook :custom_customer_fields
 
     def create
+      validate_fields!(:create)
+      content_xml unless @content_xml || @content_xml_block
+
       send_xml('create') do |xml|
         xml.function(controlid: '1') {
           xml.send('create_customer') {
             xml.customerid intacct_object_id
-            xml.name object.name
-            xml.status 'active'
+            build_content_xml(xml)
+            run_hook :custom_customer_fields, xml
           }
         }
-     end
+      end
 
       successful?
     end
@@ -37,9 +23,7 @@ module Intacct
     def get *fields
       return false unless object.intacct_system_id.present?
 
-      if fields.empty?
-        fields = Intacct.customer_fields || DEFAULT_CUSTOMER_FIELDS
-      end
+      fields = Intacct.customer_fields if fields.empty?
 
       send_xml('get') do |xml|
         xml.function(controlid: 'f4') {
@@ -54,7 +38,6 @@ module Intacct
       end
 
       if successful?
-        #get fields
         get_fields = {}
         fields.each do |field|
           get_fields[field.to_sym] = response.at("//customer//#{field.to_s}")&.content
@@ -65,16 +48,18 @@ module Intacct
       successful?
     end
 
-    def update updated_customer = false
+    def update(updated_customer = false)
       @object = updated_customer if updated_customer
       return false unless object.intacct_system_id.present?
+
+      validate_fields!(:update)
+      content_xml unless @content_xml || @content_xml_block
 
       send_xml('update') do |xml|
         xml.function(controlid: '1') {
           xml.update_customer(customerid: object.intacct_system_id) {
-            xml.name object.name
-            xml.comments
-            xml.status 'active'
+            build_content_xml(xml)
+            run_hook :custom_customer_fields, xml
           }
         }
       end
@@ -96,6 +81,56 @@ module Intacct
 
     def intacct_object_id
       object.intacct_object_id || "#{intacct_customer_prefix}#{object.id}"
+    end
+
+    def content_xml(&block)
+      if block
+        @content_xml_block = block
+        return self
+      end
+
+      @content_xml = {
+        name:     object.name,
+        comments: nil,
+        status:   'active'
+      }
+    end
+
+    private
+
+    def validate_fields!(action)
+      required = case action
+                 when :create
+                   Intacct.intacct_customer_create_required_fields ||
+                     Intacct.intacct_customer_required_fields
+                 when :update
+                   Intacct.intacct_customer_update_required_fields ||
+                     Intacct.intacct_customer_create_required_fields ||
+                     Intacct.intacct_customer_required_fields
+                 end
+      required.each do |field|
+        unless object.respond_to?(field) && object.send(field).present?
+          raise Intacct::Error.new(message: "Customer##{field} is required for #{action} but blank or missing")
+        end
+      end
+    end
+
+    def build_content_xml(xml)
+      if @content_xml_block
+        @content_xml_block.call(xml)
+      else
+        hash_to_xml(xml, @content_xml)
+      end
+    end
+
+    def hash_to_xml(xml, hash)
+      hash.each do |key, value|
+        if value.is_a?(Hash)
+          xml.send(key) { hash_to_xml(xml, value) }
+        else
+          xml.send(key, value)
+        end
+      end
     end
   end
 end

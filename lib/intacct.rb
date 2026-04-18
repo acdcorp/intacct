@@ -31,11 +31,13 @@ module Intacct
                 :app_password   , :invoice_prefix  ,
                 :bill_prefix    , :vendor_prefix   ,
                 :customer_prefix, :system_name     ,
-                :service_url    , :customer_fields ,
+                :service_url    ,
                 :http_open_timeout, :http_read_timeout,
                 :dtdversion, :uniq_id,
                 :intacct_vendor_create_required_fields,
-                :intacct_vendor_update_required_fields
+                :intacct_vendor_update_required_fields,
+                :intacct_customer_create_required_fields,
+                :intacct_customer_update_required_fields
 
   def intacct_vendor_required_fields
     @intacct_vendor_required_fields ||= [:id, :name]
@@ -43,6 +45,38 @@ module Intacct
 
   def intacct_vendor_required_fields=(val)
     @intacct_vendor_required_fields = val
+  end
+
+  def intacct_customer_required_fields
+    @intacct_customer_required_fields ||= [:id, :name]
+  end
+
+  def intacct_customer_required_fields=(val)
+    @intacct_customer_required_fields = val
+  end
+
+  def customer_fields
+    @customer_fields ||= [
+      :customerid,
+      :name,
+      :termname,
+      :auto_employee,
+      :auto_commission_start_date,
+      :auto_commission_end_date,
+      :auto_commission_rate,
+      :property_employee,
+      :property_commission_start_date,
+      :property_commission_end_date,
+      :property_commission_rate,
+      :subro_employee,
+      :subro_commission_start_date,
+      :subro_commission_end_date,
+      :subro_commission_rate
+    ]
+  end
+
+  def customer_fields=(val)
+    @customer_fields = val
   end
 
   def setup
