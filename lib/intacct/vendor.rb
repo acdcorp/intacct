@@ -98,8 +98,8 @@ module Intacct
         @content_xml[:achenabled]           = 'true'
         @content_xml[:achbankroutingnumber] = object.ach_routing_number.to_i
         @content_xml[:achaccountnumber]     = object.ach_account_number.to_i
-        @content_xml[:achaccounttype]       = "#{object.ach_account_type.capitalize} Account"
-        @content_xml[:achremittancetype]    = object.ach_account_classification == 'business' ? 'CCD' : 'PPD'
+        @content_xml[:achaccounttype]       = object.ach_account_type
+        @content_xml[:achremittancetype]    = object.ach_remittance_type
       end
 
       @content_xml
@@ -108,6 +108,12 @@ module Intacct
     private
 
     def validate_fields!(action)
+      object_id_present = (object.respond_to?(:intacct_object_id) && object.intacct_object_id.present?) ||
+                          (object.respond_to?(:id) && object.id.present?)
+      unless object_id_present
+        raise Intacct::Error.new(message: "Vendor requires id or intacct_object_id for #{action}")
+      end
+
       required = case action
                  when :create
                    Intacct.intacct_vendor_create_required_fields ||
@@ -120,6 +126,27 @@ module Intacct
       required.each do |field|
         unless object.respond_to?(field) && object.send(field).present?
           raise Intacct::Error.new(message: "Vendor##{field} is required for #{action} but blank or missing")
+        end
+      end
+      validate_billing_address!(action) if required.include?(:billing_address)
+      validate_ach!(action)
+    end
+
+    def validate_ach!(action)
+      return unless object.respond_to?(:ach_routing_number) && object.ach_routing_number.present?
+
+      %i[ach_account_number ach_account_type ach_remittance_type].each do |field|
+        unless object.respond_to?(field) && object.send(field).present?
+          raise Intacct::Error.new(message: "Vendor##{field} is required for #{action} when ach_routing_number is present")
+        end
+      end
+    end
+
+    def validate_billing_address!(action)
+      addr = object.billing_address
+      Intacct.intacct_vendor_billing_address_required_fields.each do |sub|
+        unless addr.respond_to?(sub) && addr.send(sub).present?
+          raise Intacct::Error.new(message: "Vendor#billing_address.#{sub} is required for #{action} but blank or missing")
         end
       end
     end

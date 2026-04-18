@@ -53,8 +53,8 @@ module Helpers
       email: "test@example.com",
       ach_account_number: "123456789",
       ach_routing_number: "123456789",
-      ach_account_type: "savings",
-      ach_account_classification: "business",
+      ach_account_type: "Savings Account",
+      ach_remittance_type: "CCD",
       ach_last_updated_at: Time.now,
       billing_address: address
     })
@@ -64,8 +64,8 @@ module Helpers
     @payment ||= OpenStruct.new(invoice.to_h.merge({
       type: 'some_type',
       paid_at: DateTime.now,
-      base_amt: Faker::Number.number(2),
-      additional_amt: Faker::Number.number(2)
+      base_amt: Faker::Number.number(digits: 2),
+      additional_amt: Faker::Number.number(digits: 2)
     }))
   end
 
@@ -74,19 +74,19 @@ module Helpers
       id: current_random_id,
       intacct_system_id: current_random_id,
       created_at: DateTime.now,
-      mileage_miles: Faker::Number.number(3),
-      mileage_rate: Faker::Number.number(2),
-      mileage_fee: Faker::Number.number(2),
-      base_fee: Faker::Number.number(2),
-      additional_fee: Faker::Number.number(2),
+      mileage_miles: Faker::Number.number(digits: 3),
+      mileage_rate: Faker::Number.number(digits: 2),
+      mileage_fee: Faker::Number.number(digits: 2),
+      base_fee: Faker::Number.number(digits: 2),
+      additional_fee: Faker::Number.number(digits: 2),
       note: Faker::Lorem.words,
       creator: person,
       claim: OpenStruct.new({
-        dlnumber: Faker::Number.number(6),
-        claimnumber: Faker::Number.number(6),
+        dlnumber: Faker::Number.number(digits: 6),
+        claimnumber: Faker::Number.number(digits: 6),
         appraisal_type: 'auto',
         insured_full_name: Faker::Name.name,
-        appraiser_driving_distance: Faker::Number.number(2),
+        appraiser_driving_distance: Faker::Number.number(digits: 2),
         dtcreated: DateTime.now,
         vehicle: OpenStruct.new({
           year: 2001,

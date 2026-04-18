@@ -105,6 +105,10 @@ module Intacct
       end
     end
 
+    def self.prefix
+      Intacct.send("#{name.split('::').last.downcase}_prefix")
+    end
+
     def intacct_system_id
       intacct_object_id
     end

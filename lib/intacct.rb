@@ -40,11 +40,19 @@ module Intacct
                 :intacct_customer_update_required_fields
 
   def intacct_vendor_required_fields
-    @intacct_vendor_required_fields ||= [:id, :name]
+    @intacct_vendor_required_fields ||= [:name]
   end
 
   def intacct_vendor_required_fields=(val)
     @intacct_vendor_required_fields = val
+  end
+
+  def intacct_vendor_billing_address_required_fields
+    @intacct_vendor_billing_address_required_fields ||= %i[address1 city state zipcode]
+  end
+
+  def intacct_vendor_billing_address_required_fields=(val)
+    @intacct_vendor_billing_address_required_fields = val
   end
 
   def intacct_customer_required_fields

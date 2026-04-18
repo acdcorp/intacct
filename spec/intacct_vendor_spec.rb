@@ -18,6 +18,21 @@ describe Intacct::Vendor do
     end.doc.root
   end
 
+  # ─── Intacct::Vendor.prefix ─────────────────────────────────────────────────
+
+  describe '.prefix' do
+    it 'returns the configured vendor_prefix' do
+      expect(Intacct::Vendor.prefix).to eq 'A'
+    end
+
+    it 'allows client domain model to build intacct_object_id without coupling to Intacct internals' do
+      # Simulates what a client model's intacct_object_id method would do:
+      #   def intacct_object_id = "#{Intacct::Vendor.prefix}#{id}"
+      vendor.intacct_object_id = "#{Intacct::Vendor.prefix}#{vendor.id}"
+      expect(Intacct::Vendor.new(vendor).intacct_object_id).to eq "A#{vendor.id}"
+    end
+  end
+
   # ─── intacct_object_id ──────────────────────────────────────────────────────
 
   describe '#intacct_object_id' do
@@ -106,17 +121,12 @@ describe Intacct::Vendor do
         expect(h[:achaccountnumber]).to eq vendor.ach_account_number.to_i
       end
 
-      it 'capitalizes account type and appends Account' do
-        expect(h[:achaccounttype]).to eq 'Savings Account'
+      it 'reads ach_account_type from the object as-is' do
+        expect(h[:achaccounttype]).to eq vendor.ach_account_type
       end
 
-      it 'uses CCD for business classification' do
-        expect(h[:achremittancetype]).to eq 'CCD'
-      end
-
-      it 'uses PPD for personal classification' do
-        vendor.ach_account_classification = 'personal'
-        expect(Intacct::Vendor.new(vendor).content_xml[:achremittancetype]).to eq 'PPD'
+      it 'reads ach_remittance_type from the object as-is' do
+        expect(h[:achremittancetype]).to eq vendor.ach_remittance_type
       end
     end
 
@@ -184,10 +194,10 @@ describe Intacct::Vendor do
       expect(root.at('contactinfo > contact > mailaddress > city').text).to eq vendor.billing_address.city
     end
 
-    it 'renders ACH block' do
+    it 'renders ACH block with values taken directly from the object' do
       expect(root.at('paymethod').text).to eq 'ACH'
-      expect(root.at('achaccounttype').text).to eq 'Savings Account'
-      expect(root.at('achremittancetype').text).to eq 'CCD'
+      expect(root.at('achaccounttype').text).to eq vendor.ach_account_type
+      expect(root.at('achremittancetype').text).to eq vendor.ach_remittance_type
     end
 
     it 'reflects top-level hash mutations' do
@@ -250,8 +260,27 @@ describe Intacct::Vendor do
   # ─── validate_fields! ────────────────────────────────────────────────────────
 
   describe '#validate_fields!' do
-    context 'gem default [:id, :name]' do
-      it 'passes when id and name are present' do
+    context 'intacct_object_id — always-on check' do
+      it 'passes when object has id (prefix + id fallback)' do
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
+      end
+
+      it 'passes when object defines intacct_object_id directly (no id needed)' do
+        vendor.id = nil
+        vendor.intacct_object_id = 'EXPLICIT-99'
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
+      end
+
+      it 'raises when neither id nor intacct_object_id resolves to a value' do
+        vendor.id = nil
+        vendor.intacct_object_id = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /requires id or intacct_object_id/)
+      end
+    end
+
+    context 'gem default [:name]' do
+      it 'passes when name is present' do
         v = Intacct::Vendor.new(vendor)
         expect { v.send(:validate_fields!, :create) }.not_to raise_error
         expect { v.send(:validate_fields!, :update) }.not_to raise_error
@@ -263,10 +292,10 @@ describe Intacct::Vendor do
           .to raise_error(Intacct::Error, /Vendor#name is required for create/)
       end
 
-      it 'raises Intacct::Error when id is blank on update' do
-        vendor.id = nil
+      it 'raises Intacct::Error when name is blank on update' do
+        vendor.name = nil
         expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :update) }
-          .to raise_error(Intacct::Error, /Vendor#id is required for update/)
+          .to raise_error(Intacct::Error, /Vendor#name is required for update/)
       end
     end
 
@@ -336,6 +365,125 @@ describe Intacct::Vendor do
         vendor.email = nil
         expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
           .not_to raise_error
+      end
+    end
+
+    context 'billing_address as a required field' do
+      before { Intacct.intacct_vendor_create_required_fields = [:name, :billing_address] }
+      after  do
+        Intacct.intacct_vendor_create_required_fields = nil
+        Intacct.intacct_vendor_billing_address_required_fields = nil
+      end
+
+      it 'passes when billing_address is present with all default sub-fields' do
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
+      end
+
+      it 'raises when billing_address object is missing entirely' do
+        vendor.billing_address = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /Vendor#billing_address is required for create/)
+      end
+
+      it 'raises when address1 is blank (default sub-fields)' do
+        vendor.billing_address.address1 = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /billing_address\.address1 is required for create/)
+      end
+
+      it 'does not raise when address2 is blank (not in default sub-fields)' do
+        vendor.billing_address.address2 = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
+      end
+
+      context 'with address2 added to billing_address_required_fields' do
+        before do
+          Intacct.intacct_vendor_billing_address_required_fields = %i[address1 address2 city state zipcode]
+        end
+
+        it 'raises when address2 is blank' do
+          vendor.billing_address.address2 = nil
+          expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+            .to raise_error(Intacct::Error, /billing_address\.address2 is required for create/)
+        end
+
+        it 'passes when all sub-fields including address2 are present' do
+          vendor.billing_address.address2 = 'Suite 100'
+          expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
+        end
+      end
+    end
+
+    context 'ACH field co-validation (gem-level rule)' do
+      it 'passes when all ACH fields are present' do
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
+      end
+
+      it 'skips ACH validation when ach_routing_number is absent' do
+        vendor.ach_routing_number   = nil
+        vendor.ach_account_number   = nil
+        vendor.ach_account_type     = nil
+        vendor.ach_remittance_type  = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
+      end
+
+      it 'raises when ach_routing_number is present but ach_account_number is blank' do
+        vendor.ach_account_number = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /ach_account_number is required.*ach_routing_number is present/)
+      end
+
+      it 'raises when ach_routing_number is present but ach_account_type is blank' do
+        vendor.ach_account_type = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /ach_account_type is required.*ach_routing_number is present/)
+      end
+
+      it 'raises when ach_routing_number is present but ach_remittance_type is blank' do
+        vendor.ach_remittance_type = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /ach_remittance_type is required.*ach_routing_number is present/)
+      end
+
+      it 'enforces ACH co-validation on update as well' do
+        vendor.ach_account_number = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :update) }
+          .to raise_error(Intacct::Error, /ach_account_number is required.*ach_routing_number is present/)
+      end
+    end
+
+    context 'ach_routing_number as a required field (correct way to require ACH)' do
+      before { Intacct.intacct_vendor_create_required_fields = [:id, :name, :ach_routing_number] }
+      after  { Intacct.intacct_vendor_create_required_fields = nil }
+
+      it 'passes when ach_routing_number is present' do
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
+      end
+
+      it 'raises when ach_routing_number is blank' do
+        vendor.ach_routing_number = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /Vendor#ach_routing_number is required for create/)
+      end
+    end
+
+    context 'object method names vs XML node names' do
+      it 'validates full_name (object method), not printas (XML node name)' do
+        Intacct.intacct_vendor_create_required_fields = [:id, :name, :full_name]
+        vendor.full_name = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /full_name/)
+      ensure
+        Intacct.intacct_vendor_create_required_fields = nil
+      end
+
+      it 'validates email (object method), not email1 (XML node name)' do
+        Intacct.intacct_vendor_create_required_fields = [:id, :name, :email]
+        vendor.email = nil
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /email/)
+      ensure
+        Intacct.intacct_vendor_create_required_fields = nil
       end
     end
   end
