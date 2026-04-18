@@ -302,6 +302,123 @@ describe Intacct::Bill do
     end
   end
 
+  describe 'Intacct.error_codes registry' do
+    after { Intacct.instance_variable_set(:@error_codes, nil) }
+
+    it 'includes BL03002185 by default' do
+      expect(Intacct.error_codes['BL03002185']).to eq 'A transaction with that number already exists'
+    end
+
+    it 'allows registering an additional code' do
+      Intacct.register_error_code('XX999', 'Custom error')
+      expect(Intacct.error_codes['XX999']).to eq 'Custom error'
+    end
+
+    it 'preserves built-in codes when registering a new one' do
+      Intacct.register_error_code('XX999', 'Custom error')
+      expect(Intacct.error_codes['BL03002185']).to be_present
+    end
+
+    it 'allows the hash to be fully replaced' do
+      Intacct.error_codes = { 'ZZ001' => 'override' }
+      expect(Intacct.error_codes.keys).to eq ['ZZ001']
+    end
+  end
+
+  describe 'Intacct.duplicate_transaction_error_code' do
+    after { Intacct.duplicate_transaction_error_code = nil }
+
+    it 'defaults to BL03002185' do
+      expect(Intacct.duplicate_transaction_error_code).to eq 'BL03002185'
+    end
+
+    it 'can be overridden via setup' do
+      Intacct.setup { |c| c.duplicate_transaction_error_code = 'CUSTOM001' }
+      expect(Intacct.duplicate_transaction_error_code).to eq 'CUSTOM001'
+    end
+  end
+
+  # ─── #create duplicate fallback ─────────────────────────────────────────────
+
+  describe '#create duplicate fallback' do
+    subject { intacct_bill }
+
+    before do
+      payment.intacct_system_id  = nil
+      payment.intacct_created_at = nil
+    end
+
+    def stub_requests(*bodies)
+      responses = bodies.map { |b| instance_double(Net::HTTPResponse, code: '200', body: b) }
+      call_idx = [0]
+      allow_any_instance_of(Net::HTTP).to receive(:request) do
+        resp = responses[call_idx[0]] || responses.last
+        call_idx[0] += 1
+        resp
+      end
+    end
+
+    def customer_get_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>success</status>
+            <data><customer></customer></data>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    def duplicate_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>failure</status>
+            <errormessage><error><errorno>BL03002185</errorno></error></errormessage>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    def bill_list_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>success</status>
+            <data><bill><key>5432</key></bill></data>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    it 'returns true and fires after_create with self' do
+      stub_requests(customer_get_xml, duplicate_xml, bill_list_xml)
+      captured = nil
+      subject.after_create { |i| captured = i }
+      result = subject.create
+      expect(result).to be true
+      expect(captured).to be subject
+    end
+
+    it 'sets intacct_system_id on the domain object' do
+      stub_requests(customer_get_xml, duplicate_xml, bill_list_xml)
+      subject.create
+      expect(payment.intacct_system_id).to be_present
+    end
+
+    it 'sets intacct_created_at on the domain object' do
+      stub_requests(customer_get_xml, duplicate_xml, bill_list_xml)
+      subject.create
+      expect(payment.intacct_created_at).to be_present
+    end
+
+    it 'sets intacct_key from the get_list response' do
+      stub_requests(customer_get_xml, duplicate_xml, bill_list_xml)
+      subject.create
+      expect(payment.intacct_key).to eq '5432'
+    end
+  end
+
   # ─── custom_bill_fields hook ─────────────────────────────────────────────────
 
   describe 'custom_bill_fields hook' do

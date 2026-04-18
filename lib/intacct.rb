@@ -83,6 +83,31 @@ module Intacct
     @intacct_bill_required_fields = val
   end
 
+  # Frozen built-in registry — never mutated directly
+  BUILT_IN_ERROR_CODES = {
+    'BL03002185' => 'A transaction with that number already exists'
+  }.freeze
+
+  def error_codes
+    @error_codes ||= BUILT_IN_ERROR_CODES.dup
+  end
+
+  def error_codes=(hash)
+    @error_codes = hash
+  end
+
+  def register_error_code(code, description)
+    error_codes[code] = description
+  end
+
+  def duplicate_transaction_error_code
+    @duplicate_transaction_error_code ||= 'BL03002185'
+  end
+
+  def duplicate_transaction_error_code=(code)
+    @duplicate_transaction_error_code = code
+  end
+
   def customer_fields
     @customer_fields ||= [
       :customerid,

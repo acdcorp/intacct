@@ -584,4 +584,54 @@ describe Intacct::Vendor do
       expect(captured_class).to eq 'Intacct::Vendor'
     end
   end
+
+  # ─── #create duplicate fallback ─────────────────────────────────────────────
+
+  describe '#create duplicate fallback' do
+    subject { Intacct::Vendor.new(vendor) }
+
+    before { vendor.intacct_created_at = nil }
+
+    def stub_requests(*bodies)
+      responses = bodies.map { |b| instance_double(Net::HTTPResponse, code: '200', body: b) }
+      call_idx = [0]
+      allow_any_instance_of(Net::HTTP).to receive(:request) do
+        resp = responses[call_idx[0]] || responses.last
+        call_idx[0] += 1
+        resp
+      end
+    end
+
+    def duplicate_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>failure</status>
+            <errormessage><error><errorno>BL03002185</errorno></error></errormessage>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    it 'returns true and fires after_create with self' do
+      stub_requests(duplicate_xml)
+      captured = nil
+      subject.after_create { |i| captured = i }
+      result = subject.create
+      expect(result).to be true
+      expect(captured).to be subject
+    end
+
+    it 'sets intacct_system_id on the domain object' do
+      stub_requests(duplicate_xml)
+      subject.create
+      expect(vendor.intacct_system_id).to be_present
+    end
+
+    it 'sets intacct_created_at on the domain object' do
+      stub_requests(duplicate_xml)
+      subject.create
+      expect(vendor.intacct_created_at).to be_present
+    end
+  end
 end
