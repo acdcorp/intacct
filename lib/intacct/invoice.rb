@@ -46,7 +46,8 @@ module Intacct
 
       if !success
         #this invoice already exists... lets grab it and force update
-        if resp = @response.at('//result//errorno') and resp.content == "PL01000127"
+        # BL01001973 = Invoice already exists with that invoice number
+        if resp = @response.at('//result//errorno') and resp.content == "BL01001973"
           intacct_invoice_list = Intacct::Invoice.new
           intacct_invoice_list.get_list(1) do |xml|
             xml.filter {

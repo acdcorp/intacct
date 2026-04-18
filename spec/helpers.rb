@@ -73,6 +73,7 @@ module Helpers
     @invoice ||= OpenStruct.new({
       id: current_random_id,
       intacct_system_id: current_random_id,
+      intacct_key: nil,
       created_at: DateTime.now,
       mileage_miles: Faker::Number.number(digits: 3),
       mileage_rate: Faker::Number.number(digits: 2),
