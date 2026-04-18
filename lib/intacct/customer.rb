@@ -1,12 +1,32 @@
+# frozen_string_literal: true
 module Intacct
   class Customer < Intacct::Base
+    DEFAULT_CUSTOMER_FIELDS = [
+      :customerid,
+      :name,
+      :termname,
+      :auto_employee,
+      :auto_commission_start_date,
+      :auto_commission_end_date,
+      :auto_commission_rate,
+      :property_employee,
+      :property_commission_start_date,
+      :property_commission_end_date,
+      :property_commission_rate,
+      :subro_employee,
+      :subro_commission_start_date,
+      :subro_commission_end_date,
+      :subro_commission_rate
+    ].freeze
+
+
     def create
       send_xml('create') do |xml|
-        xml.function(controlid: "1") {
-          xml.send("create_customer") {
+        xml.function(controlid: '1') {
+          xml.send('create_customer') {
             xml.customerid intacct_object_id
             xml.name object.name
-            xml.status "active"
+            xml.status 'active'
           }
         }
      end
@@ -18,28 +38,12 @@ module Intacct
       return false unless object.intacct_system_id.present?
 
       if fields.empty?
-        fields = Intacct.customer_fields || [
-          :customerid,
-          :name,
-          :termname,
-          :auto_employee,
-          :auto_commission_start_date,
-          :auto_commission_end_date,
-          :auto_commission_rate,
-          :property_employee,
-          :property_commission_start_date,
-          :property_commission_end_date,
-          :property_commission_rate,
-          :subro_employee,
-          :subro_commission_start_date,
-          :subro_commission_end_date,
-          :subro_commission_rate
-        ]
+        fields = Intacct.customer_fields || DEFAULT_CUSTOMER_FIELDS
       end
 
       send_xml('get') do |xml|
-        xml.function(controlid: "f4") {
-          xml.get(object: "customer", key: "#{object.intacct_system_id}") {
+        xml.function(controlid: 'f4') {
+          xml.get(object: 'customer', key: "#{object.intacct_system_id}") {
             xml.fields {
               fields.each do |field|
                 xml.field field.to_s
@@ -66,11 +70,11 @@ module Intacct
       return false unless object.intacct_system_id.present?
 
       send_xml('update') do |xml|
-        xml.function(controlid: "1") {
+        xml.function(controlid: '1') {
           xml.update_customer(customerid: object.intacct_system_id) {
             xml.name object.name
             xml.comments
-            xml.status "active"
+            xml.status 'active'
           }
         }
       end
@@ -82,7 +86,7 @@ module Intacct
       return false unless object.intacct_system_id.present?
 
       @response = send_xml('delete') do |xml|
-        xml.function(controlid: "1") {
+        xml.function(controlid: '1') {
           xml.delete_customer(customerid: object.intacct_system_id)
         }
       end
@@ -91,7 +95,7 @@ module Intacct
     end
 
     def intacct_object_id
-      "#{intacct_customer_prefix}#{object.id}"
+      object.intacct_object_id || "#{intacct_customer_prefix}#{object.id}"
     end
   end
 end
