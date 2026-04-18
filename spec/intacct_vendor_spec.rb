@@ -487,4 +487,101 @@ describe Intacct::Vendor do
       end
     end
   end
+
+  # ─── before_send_xml / after_response hooks ──────────────────────────────────
+
+  describe 'before_send_xml and after_response hooks' do
+    def stub_http(status: '200', body: nil)
+      body ||= <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>success</status></result></operation>
+        </response>
+      XML
+      fake_response = instance_double(Net::HTTPResponse, code: status, body: body)
+      allow_any_instance_of(Net::HTTP).to receive(:request).and_return(fake_response)
+    end
+
+    def error_body
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>failure</status>
+            <errormessage><error><description>Something went wrong</description></error></errormessage>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    it 'fires before_send_xml with the outgoing XML string before the HTTP call' do
+      stub_http
+      captured = nil
+      v = Intacct::Vendor.new(vendor)
+      v.before_send_xml { |xml_str| captured = xml_str }
+      v.create
+      expect(captured).to be_a(String)
+      expect(captured).to include('<create_vendor>')
+    end
+
+    it 'fires after_response with the Intacct instance on success' do
+      stub_http
+      captured = nil
+      v = Intacct::Vendor.new(vendor)
+      v.after_response { |intacct| captured = intacct }
+      v.create
+      expect(captured).to be v
+      expect(captured.successful?).to be true
+      expect(captured.intacct_action).to eq 'create'
+      expect(captured.sent_xml).to include('<create_vendor>')
+      expect(captured.response).to be_a(Nokogiri::XML::Document)
+    end
+
+    it 'fires after_response with the Intacct instance on error (fires regardless of outcome)' do
+      stub_http(status: '200', body: error_body)
+      captured = nil
+      v = Intacct::Vendor.new(vendor)
+      v.after_response { |intacct| captured = intacct }
+      v.create
+      expect(captured).to be v
+      expect(captured.successful?).to be false
+      expect(captured.class.name).to eq 'Intacct::Vendor'
+    end
+
+    it 'fires before_send_xml before the HTTP request is made' do
+      call_order = []
+      fake_response = instance_double(Net::HTTPResponse, code: '200', body: <<~XML)
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>success</status></result></operation>
+        </response>
+      XML
+      allow_any_instance_of(Net::HTTP).to receive(:request) do
+        call_order << :http
+        fake_response
+      end
+      v = Intacct::Vendor.new(vendor)
+      v.before_send_xml { call_order << :hook }
+      v.create
+      expect(call_order).to eq [:hook, :http]
+    end
+
+    it 'fires after_response before on_error when the call fails' do
+      stub_http(status: '200', body: error_body)
+      call_order = []
+      v = Intacct::Vendor.new(vendor)
+      v.after_response { call_order << :after_response }
+      v.on_error { call_order << :on_error }
+      v.create
+      expect(call_order).to eq [:after_response, :on_error]
+    end
+
+    it 'exposes class name so the client knows which Intacct type fired' do
+      stub_http
+      captured_class = nil
+      v = Intacct::Vendor.new(vendor)
+      v.after_response { |intacct| captured_class = intacct.class.name }
+      v.create
+      expect(captured_class).to eq 'Intacct::Vendor'
+    end
+  end
 end

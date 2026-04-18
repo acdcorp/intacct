@@ -46,8 +46,8 @@ Each domain class wraps a plain Ruby object. The gem calls methods on that objec
 | `billing_address` | Optional | Must respond to `address1`, `address2`, `city`, `state`, `zipcode` |
 | `ach_routing_number` | Optional | If present, ACH block is included |
 | `ach_account_number` | Conditional | Required if `ach_routing_number` present |
-| `ach_account_type` | Conditional | `"savings"` or `"checking"` |
-| `ach_account_classification` | Conditional | `"business"` or `"personal"` |
+| `ach_account_type` | Conditional | Intacct-formatted string, e.g. `"Savings Account"`, `"Checking Account"` |
+| `ach_remittance_type` | Conditional | Intacct-formatted string, e.g. `"CCD"` or `"PPD"` — client derives from domain logic |
 | `intacct_object_id` | Optional | Override vendorid (default: `vendor_prefix + id`) |
 | `intacct_key` | Optional | Recommended — gem writes back via `respond_to?` |
 | `intacct_key=` | Optional | Recommended |
@@ -76,8 +76,13 @@ Resolution order:
 ```ruby
 vendor = Intacct::Vendor.new(my_vendor)
 
-# Append extra XML after the default body
-vendor.on(:custom_vendor_fields) do |xml|
+# Instance-level (one vendor)
+vendor.custom_vendor_fields do |xml, intacct|
+  xml.some_custom_field "value"
+end
+
+# Class-level in an initializer (all vendors)
+Intacct::Vendor.custom_vendor_fields do |xml, intacct|
   xml.some_custom_field "value"
 end
 
@@ -118,8 +123,14 @@ vendor.content_xml
 **Hooks:**
 
 ```ruby
+# Instance-level (one invoice)
 invoice = Intacct::Invoice.new(invoice: my_invoice, vendor: my_vendor, customer: my_customer)
-invoice.on(:custom_invoice_fields) do |xml|
+invoice.custom_invoice_fields do |xml, intacct|
+  xml.some_custom_field "value"
+end
+
+# Class-level in an initializer (all invoices)
+Intacct::Invoice.custom_invoice_fields do |xml, intacct|
   xml.some_custom_field "value"
 end
 ```
@@ -129,6 +140,27 @@ end
 ### `Intacct::Bill.new(bill: obj, vendor: obj, customer: obj)`
 
 Same composite pattern as Invoice — `bill_obj` follows the same shape as `invoice_obj`.
+
+**Hooks:**
+
+```ruby
+# Instance-level (one bill)
+bill = Intacct::Bill.new(payment: my_bill, vendor: my_vendor, customer: my_customer)
+bill.custom_bill_fields do |xml, intacct|
+  xml.some_custom_field "value"
+end
+bill.bill_item_fields do |xml, intacct|
+  xml.billitems { xml.lineitem { xml.amount "100.00" } }
+end
+
+# Class-level in an initializer (all bills)
+Intacct::Bill.custom_bill_fields do |xml, intacct|
+  xml.some_custom_field "value"
+end
+Intacct::Bill.bill_item_fields do |xml, intacct|
+  xml.billitems { xml.lineitem { xml.amount "100.00" } }
+end
+```
 
 ---
 
@@ -193,18 +225,14 @@ Intacct::Customer.new(my_customer).get(:customerid, :name, :termname)
 ```ruby
 customer = Intacct::Customer.new(my_customer)
 
-# Append extra XML after the default body (instance-level)
-customer.custom_customer_fields do |xml|
+# Instance-level (one customer)
+customer.custom_customer_fields do |xml, intacct|
   xml.some_custom_field "value"
 end
 
-# Or register at the class level in an initializer — fires for every instance
-module Intacct
-  class Customer
-    custom_customer_fields do |xml|
-      xml.some_custom_field "value"
-    end
-  end
+# Class-level in an initializer (all customers)
+Intacct::Customer.custom_customer_fields do |xml, intacct|
+  xml.some_custom_field "value"
 end
 
 # Replace the entire body with a custom block

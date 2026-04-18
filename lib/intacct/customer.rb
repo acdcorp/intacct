@@ -12,7 +12,7 @@ module Intacct
           xml.send('create_customer') {
             xml.customerid intacct_object_id
             build_content_xml(xml)
-            run_hook :custom_customer_fields, xml
+            run_hook :custom_customer_fields, xml, self
           }
         }
       end
@@ -59,7 +59,7 @@ module Intacct
         xml.function(controlid: '1') {
           xml.update_customer(customerid: object.intacct_system_id) {
             build_content_xml(xml)
-            run_hook :custom_customer_fields, xml
+            run_hook :custom_customer_fields, xml, self
           }
         }
       end

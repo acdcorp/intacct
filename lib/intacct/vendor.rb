@@ -13,7 +13,7 @@ module Intacct
           xml.create_vendor {
             xml.vendorid intacct_object_id
             build_content_xml(xml)
-            run_hook :custom_vendor_fields, xml
+            run_hook :custom_vendor_fields, xml, self
           }
         }
       end
@@ -32,7 +32,7 @@ module Intacct
         xml.function(controlid: "1") {
           xml.update_vendor(vendorid: object.intacct_system_id) {
             build_content_xml(xml)
-            run_hook :custom_vendor_fields, xml
+            run_hook :custom_vendor_fields, xml, self
           }
         }
       end

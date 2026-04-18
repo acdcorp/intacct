@@ -110,11 +110,11 @@ module Intacct
         xml.month object.payment.paid_at.strftime("%m")
         xml.day object.payment.paid_at.strftime("%d")
       }
-      run_hook :custom_bill_fields, xml
-      run_hook :bill_item_fields, xml
+      run_hook :custom_bill_fields, xml, self
+      run_hook :bill_item_fields, xml, self
     end
 
-    def set_intacct_system_id
+    def set_intacct_system_id(_ = nil)
       object.payment.intacct_system_id = intacct_object_id
     end
 
@@ -122,18 +122,21 @@ module Intacct
       object.payment.intacct_key = key
     end
 
-    def delete_intacct_system_id
+    def delete_intacct_system_id(_ = nil)
       object.payment.intacct_system_id = nil
     end
 
-    def delete_intacct_key
+    def delete_intacct_key(_ = nil)
       object.payment.intacct_key = nil
     end
 
     def set_date_time type
       if %w(create update delete).include? type
         if object.payment.respond_to? :"intacct_#{type}d_at"
-          object.payment.send("intacct_#{type}d_at=", DateTime.now)
+          object.payment.send("intacct_#{type}d_at=", Time.zone.now)
+        end
+        if type == "create" && object.payment.respond_to?(:intacct_updated_at)
+          object.payment.intacct_updated_at = Time.zone.now
         end
       end
     end

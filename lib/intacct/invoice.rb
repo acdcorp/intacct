@@ -122,10 +122,10 @@ module Intacct
       xml.termname termname.present?? termname : "Net 30"
 
       xml.invoiceno intacct_object_id
-      run_hook :custom_invoice_fields, xml
+      run_hook :custom_invoice_fields, xml, self
     end
 
-    def set_intacct_system_id
+    def set_intacct_system_id(_ = nil)
       object.invoice.intacct_system_id = intacct_object_id
     end
 
@@ -133,11 +133,11 @@ module Intacct
       object.invoice.intacct_key = key
     end
 
-    def delete_intacct_system_id
+    def delete_intacct_system_id(_ = nil)
       object.invoice.intacct_system_id = nil
     end
 
-    def delete_intacct_key
+    def delete_intacct_key(_ = nil)
       object.invoice.intacct_key = nil
     end
 
@@ -187,6 +187,9 @@ module Intacct
       if %w(create update delete).include? type
         if object.invoice.respond_to? :"intacct_#{type}d_at"
           object.invoice.send("intacct_#{type}d_at=", DateTime.now)
+        end
+        if type == "create" && object.invoice.respond_to?(:intacct_updated_at)
+          object.invoice.intacct_updated_at = DateTime.now
         end
       end
     end
