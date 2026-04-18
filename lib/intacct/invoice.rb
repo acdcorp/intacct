@@ -115,6 +115,10 @@ module Intacct
       object.invoice.intacct_object_id || "#{intacct_invoice_prefix}#{object.invoice.id}"
     end
 
+    def intacct_domain_object
+      object.invoice
+    end
+
     def content_xml(&block)
       if block
         @content_xml_block = block
@@ -134,22 +138,6 @@ module Intacct
       }
     end
 
-    def set_intacct_system_id(_ = nil)
-      object.invoice.intacct_system_id = intacct_object_id
-    end
-
-    def set_intacct_key key
-      object.invoice.intacct_key = key
-    end
-
-    def delete_intacct_system_id(_ = nil)
-      object.invoice.intacct_system_id = nil
-    end
-
-    def delete_intacct_key(_ = nil)
-      object.invoice.intacct_key = nil
-    end
-
     def get_employee_id
       return if !customer_data
 
@@ -161,8 +149,8 @@ module Intacct
       end
 
       #make sure valid time
-      return if Time.strptime(customer_data.send("#{system}_commission_start_date"),"%m/%d/%Y")>Time.now
-      return if Time.strptime(customer_data.send("#{system}_commission_end_date"),"%m/%d/%Y")<Time.now
+      return if Time.strptime(customer_data.send("#{system}_commission_start_date"),"%m/%d/%Y") > Time.zone.now
+      return if Time.strptime(customer_data.send("#{system}_commission_end_date"),"%m/%d/%Y") < Time.zone.now
 
       customer_data.send("#{system}_employee")
     end
@@ -189,17 +177,6 @@ module Intacct
         customer_data.send("#{system}_commission_rate").to_f*100
       else #if in second year half the commission
         (customer_data.send("#{system}_commission_rate").to_f*100)/2
-      end
-    end
-
-    def set_date_time type
-      if %w(create update delete).include? type
-        if object.invoice.respond_to? :"intacct_#{type}d_at"
-          object.invoice.send("intacct_#{type}d_at=", DateTime.now)
-        end
-        if type == "create" && object.invoice.respond_to?(:intacct_updated_at)
-          object.invoice.intacct_updated_at = DateTime.now
-        end
       end
     end
 

@@ -51,6 +51,36 @@ describe Intacct::Invoice do
     end
   end
 
+  # ─── #intacct_domain_object ──────────────────────────────────────────────────
+
+  describe '#intacct_domain_object' do
+    it 'returns object.invoice' do
+      expect(intacct_invoice.intacct_domain_object).to be invoice
+    end
+
+    it 'routes set_intacct_system_id to object.invoice' do
+      intacct_invoice.send(:set_intacct_system_id)
+      expect(invoice.intacct_system_id).to eq intacct_invoice.intacct_object_id
+    end
+
+    it 'routes set_intacct_key to object.invoice' do
+      intacct_invoice.send(:set_intacct_key, 'KEY-42')
+      expect(invoice.intacct_key).to eq 'KEY-42'
+    end
+
+    it 'routes delete_intacct_system_id to object.invoice' do
+      invoice.intacct_system_id = 'EXISTING'
+      intacct_invoice.send(:delete_intacct_system_id)
+      expect(invoice.intacct_system_id).to be_nil
+    end
+
+    it 'routes set_date_time to object.invoice' do
+      invoice.intacct_created_at = nil
+      intacct_invoice.send(:set_date_time, 'create')
+      expect(invoice.intacct_created_at).not_to be_nil
+    end
+  end
+
   # ─── content_xml (hash path) ────────────────────────────────────────────────
 
   describe '#content_xml without block' do

@@ -52,6 +52,36 @@ describe Intacct::Bill do
     end
   end
 
+  # ─── #intacct_domain_object ──────────────────────────────────────────────────
+
+  describe '#intacct_domain_object' do
+    it 'returns object.payment' do
+      expect(intacct_bill.intacct_domain_object).to be payment
+    end
+
+    it 'routes set_intacct_system_id to object.payment' do
+      intacct_bill.send(:set_intacct_system_id)
+      expect(payment.intacct_system_id).to eq intacct_bill.intacct_object_id
+    end
+
+    it 'routes set_intacct_key to object.payment' do
+      intacct_bill.send(:set_intacct_key, 'KEY-99')
+      expect(payment.intacct_key).to eq 'KEY-99'
+    end
+
+    it 'routes delete_intacct_system_id to object.payment' do
+      payment.intacct_system_id = 'EXISTING'
+      intacct_bill.send(:delete_intacct_system_id)
+      expect(payment.intacct_system_id).to be_nil
+    end
+
+    it 'routes set_date_time to object.payment' do
+      payment.intacct_created_at = nil
+      intacct_bill.send(:set_date_time, 'create')
+      expect(payment.intacct_created_at).not_to be_nil
+    end
+  end
+
   # ─── content_xml (hash path) ────────────────────────────────────────────────
 
   describe '#content_xml without block' do

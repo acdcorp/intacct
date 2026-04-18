@@ -99,6 +99,10 @@ module Intacct
       object.payment.intacct_object_id || "#{intacct_bill_prefix}#{object.payment.id}"
     end
 
+    def intacct_domain_object
+      object.payment
+    end
+
     def content_xml(&block)
       if block
         @content_xml_block = block
@@ -123,33 +127,6 @@ module Intacct
           day:   object.payment.paid_at.strftime("%d")
         }
       }
-    end
-
-    def set_intacct_system_id(_ = nil)
-      object.payment.intacct_system_id = intacct_object_id
-    end
-
-    def set_intacct_key key
-      object.payment.intacct_key = key
-    end
-
-    def delete_intacct_system_id(_ = nil)
-      object.payment.intacct_system_id = nil
-    end
-
-    def delete_intacct_key(_ = nil)
-      object.payment.intacct_key = nil
-    end
-
-    def set_date_time type
-      if %w(create update delete).include? type
-        if object.payment.respond_to? :"intacct_#{type}d_at"
-          object.payment.send("intacct_#{type}d_at=", Time.zone.now)
-        end
-        if type == "create" && object.payment.respond_to?(:intacct_updated_at)
-          object.payment.intacct_updated_at = Time.zone.now
-        end
-      end
     end
 
     private

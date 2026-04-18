@@ -123,6 +123,15 @@ module Intacct
       end
     end
 
+    # Returns the domain object that lifecycle hooks (set_date_time,
+    # set_intacct_system_id, set_intacct_key, etc.) operate on.
+    # Vendor/Customer: object itself.
+    # Invoice: object.invoice  (overridden there)
+    # Bill:    object.payment  (overridden there)
+    def intacct_domain_object
+      object
+    end
+
     private
 
     def send_xml action
@@ -207,29 +216,32 @@ module Intacct
     end
 
     def set_intacct_system_id(_ = nil)
-      object.intacct_system_id = intacct_object_id
+      intacct_domain_object.intacct_system_id = intacct_object_id
     end
 
     def delete_intacct_system_id(_ = nil)
-      object.intacct_system_id = nil
+      intacct_domain_object.intacct_system_id = nil
     end
 
     def set_intacct_key key
-      object.intacct_key = key if object.respond_to? :intacct_key
+      target = intacct_domain_object
+      target.intacct_key = key if target.respond_to?(:intacct_key)
     end
 
     def delete_intacct_key(_ = nil)
-      object.intacct_key = nil if object.respond_to? :intacct_key
+      target = intacct_domain_object
+      target.intacct_key = nil if target.respond_to?(:intacct_key)
     end
 
     def set_date_time type
+      target = intacct_domain_object
+      now = Time.respond_to?(:zone) && Time.zone ? Time.zone.now : Time.now
       if %w(create update delete).include? type
-        if object.respond_to? :"intacct_#{type}d_at"
-          object.send("intacct_#{type}d_at=", DateTime.now)
+        if target.respond_to? :"intacct_#{type}d_at"
+          target.send("intacct_#{type}d_at=", now)
         end
-        #also update updated at on create
-        if type=="create" and object.respond_to?(:"intacct_updated_at")
-          object.intacct_updated_at = DateTime.now
+        if type == "create" && target.respond_to?(:intacct_updated_at)
+          target.intacct_updated_at = now
         end
       end
     end
