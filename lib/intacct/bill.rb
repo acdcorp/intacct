@@ -6,7 +6,7 @@ module Intacct
     define_hook :custom_bill_fields, :bill_item_fields
 
     def create
-      return Intacct::Error.new(message: 'Bill already created on intacct') if object.payment.intacct_system_id.present?
+      raise Intacct::Error.new(message: 'Bill already created on intacct') if object.payment.intacct_system_id.present?
 
       validate_fields!(:create)
 
