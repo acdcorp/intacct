@@ -37,7 +37,11 @@ module Intacct
                 :intacct_vendor_create_required_fields,
                 :intacct_vendor_update_required_fields,
                 :intacct_customer_create_required_fields,
-                :intacct_customer_update_required_fields
+                :intacct_customer_update_required_fields,
+                :intacct_invoice_create_required_fields,
+                :intacct_invoice_update_required_fields,
+                :intacct_bill_create_required_fields,
+                :intacct_bill_update_required_fields
 
   def intacct_vendor_required_fields
     @intacct_vendor_required_fields ||= [:name]
@@ -61,6 +65,22 @@ module Intacct
 
   def intacct_customer_required_fields=(val)
     @intacct_customer_required_fields = val
+  end
+
+  def intacct_invoice_required_fields
+    @intacct_invoice_required_fields ||= [:created_at]
+  end
+
+  def intacct_invoice_required_fields=(val)
+    @intacct_invoice_required_fields = val
+  end
+
+  def intacct_bill_required_fields
+    @intacct_bill_required_fields ||= [:created_at, :paid_at]
+  end
+
+  def intacct_bill_required_fields=(val)
+    @intacct_bill_required_fields = val
   end
 
   def customer_fields

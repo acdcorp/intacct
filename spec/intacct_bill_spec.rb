@@ -155,6 +155,123 @@ describe Intacct::Bill do
     end
   end
 
+  # ─── #validate_fields! ───────────────────────────────────────────────────────
+
+  describe '#validate_fields!' do
+    context 'intacct_object_id — always-on check' do
+      it 'passes when payment has id (prefix + id fallback)' do
+        expect { intacct_bill.send(:validate_fields!, :create) }.not_to raise_error
+      end
+
+      it 'passes when payment defines intacct_object_id directly (no id needed)' do
+        payment.intacct_object_id = 'EXPLICIT-42'
+        payment.id = nil
+        expect { intacct_bill.send(:validate_fields!, :create) }.not_to raise_error
+      end
+
+      it 'raises when neither id nor intacct_object_id resolves to a value' do
+        payment.id = nil
+        payment.intacct_object_id = nil
+        expect { intacct_bill.send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /Bill requires id or intacct_object_id/)
+      end
+    end
+
+    context 'gem default [:created_at, :paid_at]' do
+      it 'passes when created_at and paid_at are present' do
+        expect { intacct_bill.send(:validate_fields!, :create) }.not_to raise_error
+        expect { intacct_bill.send(:validate_fields!, :update) }.not_to raise_error
+      end
+
+      it 'raises Intacct::Error when created_at is blank on create' do
+        payment.created_at = nil
+        expect { intacct_bill.send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /Bill#created_at is required for create/)
+      end
+
+      it 'raises Intacct::Error when paid_at is blank on create' do
+        payment.paid_at = nil
+        expect { intacct_bill.send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /Bill#paid_at is required for create/)
+      end
+
+      it 'raises Intacct::Error when paid_at is blank on update' do
+        payment.paid_at = nil
+        expect { intacct_bill.send(:validate_fields!, :update) }
+          .to raise_error(Intacct::Error, /Bill#paid_at is required for update/)
+      end
+    end
+
+    context 'intacct_bill_required_fields overridden globally' do
+      before { Intacct.intacct_bill_required_fields = [:id, :created_at, :paid_at, :intacct_key] }
+      after  { Intacct.intacct_bill_required_fields = nil }
+
+      it 'applies the override to both create and update' do
+        payment.intacct_key = nil
+        expect { intacct_bill.send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /Bill#intacct_key is required for create/)
+        payment.intacct_key = nil
+        expect { intacct_bill.send(:validate_fields!, :update) }
+          .to raise_error(Intacct::Error, /Bill#intacct_key is required for update/)
+      end
+    end
+
+    context 'only intacct_bill_create_required_fields set' do
+      before { Intacct.intacct_bill_create_required_fields = [:id, :created_at, :paid_at, :intacct_key] }
+      after  { Intacct.intacct_bill_create_required_fields = nil }
+
+      it 'validates intacct_key on create' do
+        payment.intacct_key = nil
+        expect { intacct_bill.send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /intacct_key/)
+      end
+
+      it 'also applies to update when intacct_bill_update_required_fields is not set' do
+        payment.intacct_key = nil
+        expect { intacct_bill.send(:validate_fields!, :update) }
+          .to raise_error(Intacct::Error, /intacct_key/)
+      end
+    end
+
+    context 'both create and update required fields set' do
+      before do
+        Intacct.intacct_bill_create_required_fields = [:id, :created_at, :paid_at, :intacct_key]
+        Intacct.intacct_bill_update_required_fields = [:id, :created_at, :paid_at]
+      end
+      after do
+        Intacct.intacct_bill_create_required_fields = nil
+        Intacct.intacct_bill_update_required_fields = nil
+      end
+
+      it 'uses create fields for create' do
+        payment.intacct_key = nil
+        expect { intacct_bill.send(:validate_fields!, :create) }
+          .to raise_error(Intacct::Error, /intacct_key/)
+      end
+
+      it 'uses update fields for update — intacct_key not required' do
+        payment.intacct_key = nil
+        expect { intacct_bill.send(:validate_fields!, :update) }.not_to raise_error
+      end
+    end
+
+    context 'only intacct_bill_update_required_fields set' do
+      before { Intacct.intacct_bill_update_required_fields = [:id, :created_at, :paid_at, :intacct_key] }
+      after  { Intacct.intacct_bill_update_required_fields = nil }
+
+      it 'uses update fields for update' do
+        payment.intacct_key = nil
+        expect { intacct_bill.send(:validate_fields!, :update) }
+          .to raise_error(Intacct::Error, /intacct_key/)
+      end
+
+      it 'falls back to gem default for create — intacct_key not required' do
+        payment.intacct_key = nil
+        expect { intacct_bill.send(:validate_fields!, :create) }.not_to raise_error
+      end
+    end
+  end
+
   # ─── custom_bill_fields hook ─────────────────────────────────────────────────
 
   describe 'custom_bill_fields hook' do

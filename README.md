@@ -120,6 +120,45 @@ vendor.content_xml
 
 `customer_obj` and `vendor_obj` follow the same interfaces as their standalone `new` calls above.
 
+**Required-fields validation** is configured in `Intacct.setup`. Fields are checked on `invoice_obj` before the create call:
+
+The gem always checks that `invoice_obj` provides either `intacct_object_id` or `id` (used to build the invoiceno). Additional fields are configurable:
+
+```ruby
+Intacct.setup do |config|
+  # Gem default — [:created_at] (consumed by content_xml; id/intacct_object_id checked separately)
+  config.intacct_invoice_required_fields = [:created_at]
+
+  # If only create is set, it applies to both create and update.
+  # If both are set, each applies to its respective operation.
+  # If only update is set, create falls back to intacct_invoice_required_fields.
+  config.intacct_invoice_create_required_fields = [:created_at]
+  config.intacct_invoice_update_required_fields = [:created_at]
+end
+```
+
+Resolution order:
+- **create** → `intacct_invoice_create_required_fields` || `intacct_invoice_required_fields`
+- **update** → `intacct_invoice_update_required_fields` || `intacct_invoice_create_required_fields` || `intacct_invoice_required_fields`
+
+**`content_xml`:**
+
+```ruby
+invoice = Intacct::Invoice.new(composite)
+invoice.customer_data = OpenStruct.new(termname: "Net 30")  # set before calling content_xml
+
+# Inspect the default field hash (call after customer/vendor are provisioned,
+# or just let create do it automatically):
+invoice.content_xml
+# => { customerid: "C123", datecreated: { year: "2024", ... }, termname: "Net 30", invoiceno: "INV-456" }
+
+# Replace the entire body with a custom block:
+invoice.content_xml do |xml|
+  xml.customerid object.customer.intacct_system_id
+  xml.invoiceno  "CUSTOM-001"
+end
+```
+
 **Hooks:**
 
 ```ruby
@@ -140,6 +179,43 @@ end
 ### `Intacct::Bill.new(bill: obj, vendor: obj, customer: obj)`
 
 Same composite pattern as Invoice — `bill_obj` follows the same shape as `invoice_obj`.
+
+**Required-fields validation** is configured in `Intacct.setup`. Fields are checked on `payment_obj` before the create call:
+
+The gem always checks that `payment_obj` provides either `intacct_object_id` or `id` (used to build the bill number). Additional fields are configurable:
+
+```ruby
+Intacct.setup do |config|
+  # Gem default — [:created_at, :paid_at] (consumed by content_xml; id/intacct_object_id checked separately)
+  config.intacct_bill_required_fields = [:created_at, :paid_at]
+
+  # If only create is set, it applies to both create and update.
+  # If both are set, each applies to its respective operation.
+  # If only update is set, create falls back to intacct_bill_required_fields.
+  config.intacct_bill_create_required_fields = [:created_at, :paid_at]
+  config.intacct_bill_update_required_fields = [:created_at, :paid_at]
+end
+```
+
+Resolution order:
+- **create** → `intacct_bill_create_required_fields` || `intacct_bill_required_fields`
+- **update** → `intacct_bill_update_required_fields` || `intacct_bill_create_required_fields` || `intacct_bill_required_fields`
+
+**`content_xml`:**
+
+```ruby
+bill = Intacct::Bill.new(composite)
+
+# Inspect the default field hash (call after vendor is provisioned,
+# or just let create do it automatically):
+bill.content_xml
+# => { vendorid: "V123", datecreated: { year: "2024", ... }, dateposted: { ... }, datedue: { ... } }
+
+# Replace the entire body with a custom block:
+bill.content_xml do |xml|
+  xml.vendorid object.vendor.intacct_system_id
+end
+```
 
 **Hooks:**
 

@@ -8,6 +8,8 @@ module Intacct
     def create
       return Intacct::Error.new(message: 'Bill already created on intacct') if object.payment.intacct_system_id.present?
 
+      validate_fields!(:create)
+
       # Need to create the customer if one doesn't exist
       intacct_customer = Intacct::Customer.new object.customer
       unless object.customer.intacct_system_id.present?
@@ -151,6 +153,29 @@ module Intacct
     end
 
     private
+
+    def validate_fields!(action)
+      object_id_present = (object.payment.respond_to?(:intacct_object_id) && object.payment.intacct_object_id.present?) ||
+                          (object.payment.respond_to?(:id) && object.payment.id.present?)
+      unless object_id_present
+        raise Intacct::Error.new(message: "Bill requires id or intacct_object_id for #{action}")
+      end
+
+      required = case action
+                 when :create
+                   Intacct.intacct_bill_create_required_fields ||
+                     Intacct.intacct_bill_required_fields
+                 when :update
+                   Intacct.intacct_bill_update_required_fields ||
+                     Intacct.intacct_bill_create_required_fields ||
+                     Intacct.intacct_bill_required_fields
+                 end
+      required.each do |field|
+        unless object.payment.respond_to?(field) && object.payment.send(field).present?
+          raise Intacct::Error.new(message: "Bill##{field} is required for #{action} but blank or missing")
+        end
+      end
+    end
 
     def build_content_xml(xml)
       if @content_xml_block
