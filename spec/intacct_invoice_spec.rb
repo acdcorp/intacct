@@ -473,58 +473,6 @@ describe Intacct::Invoice do
     end
   end
 
-  # ─── vendor failure does not block invoice create ────────────────────────────
-
-  describe '#create vendor failure does not block' do
-    before do
-      invoice.intacct_system_id  = nil
-      invoice.intacct_created_at = nil
-      vendor.intacct_system_id   = nil  # triggers vendor create path
-      vendor.name                = nil  # makes vendor validate_fields! raise Intacct::Error
-    end
-
-    def stub_requests(*bodies)
-      responses = bodies.map { |b| instance_double(Net::HTTPResponse, code: '200', body: b) }
-      call_idx = [0]
-      allow_any_instance_of(Net::HTTP).to receive(:request) do
-        resp = responses[call_idx[0]] || responses.last
-        call_idx[0] += 1
-        resp
-      end
-    end
-
-    def customer_get_xml
-      <<~XML
-        <?xml version="1.0"?>
-        <response><control><status>success</status></control>
-          <operation><result><status>success</status>
-            <data><customer></customer></data>
-          </result></operation>
-        </response>
-      XML
-    end
-
-    def invoice_create_xml
-      <<~XML
-        <?xml version="1.0"?>
-        <response><control><status>success</status></control>
-          <operation><result><status>success</status></result></operation>
-        </response>
-      XML
-    end
-
-    it 'returns true even when vendor create raises Intacct::Error' do
-      stub_requests(customer_get_xml, invoice_create_xml)
-      expect(intacct_invoice.create).to be true
-    end
-
-    it 'sets intacct_system_id on the invoice domain object' do
-      stub_requests(customer_get_xml, invoice_create_xml)
-      intacct_invoice.create
-      expect(invoice.intacct_system_id).to be_present
-    end
-  end
-
   # ─── custom_invoice_fields hook ──────────────────────────────────────────────
 
   describe 'custom_invoice_fields hook' do
@@ -552,5 +500,18 @@ describe Intacct::Invoice do
     it 'produces no extra nodes when no hook is registered' do
       expect(build_xml(c).at('extra')).to be_nil
     end
+  end
+end
+
+describe 'Intacct.duplicate_contact_error_code' do
+  after { Intacct.duplicate_contact_error_code = nil }
+
+  it 'defaults to BL34000061' do
+    expect(Intacct.duplicate_contact_error_code).to eq 'BL34000061'
+  end
+
+  it 'can be overridden via setup' do
+    Intacct.setup { |c| c.duplicate_contact_error_code = 'CUSTOM002' }
+    expect(Intacct.duplicate_contact_error_code).to eq 'CUSTOM002'
   end
 end

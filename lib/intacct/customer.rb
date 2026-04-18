@@ -22,7 +22,10 @@ module Intacct
       return true if success
 
       if !success
-        if @response.search('//result//errorno').any? { |e| e.content == Intacct.duplicate_transaction_error_code }
+        error_codes = @response.search('//result//errorno').map(&:content)
+
+        if error_codes.include?(Intacct.duplicate_transaction_error_code) ||
+           error_codes.include?(Intacct.duplicate_contact_error_code)
           set_intacct_system_id
           run_hook :after_send_xml, 'create'
           run_hook :after_create, self

@@ -647,5 +647,35 @@ describe Intacct::Vendor do
       subject.create
       expect(vendor.intacct_created_at).to be_present
     end
+
+    def bl34_duplicate_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>failure</status>
+            <errormessage><error><errorno>BL34000061</errorno></error></errormessage>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    it 'returns true when BL34000061 fires (contact already exists)' do
+      stub_requests(bl34_duplicate_xml)
+      expect(subject.create).to be true
+    end
+
+    it 'sets intacct_system_id when BL34000061 fires' do
+      stub_requests(bl34_duplicate_xml)
+      subject.create
+      expect(vendor.intacct_system_id).to be_present
+    end
+
+    it 'fires after_create with self when BL34000061 fires' do
+      stub_requests(bl34_duplicate_xml)
+      captured = nil
+      subject.after_create { |i| captured = i }
+      subject.create
+      expect(captured).to be subject
+    end
   end
 end

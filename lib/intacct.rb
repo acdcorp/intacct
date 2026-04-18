@@ -85,7 +85,8 @@ module Intacct
 
   # Frozen built-in registry — never mutated directly
   BUILT_IN_ERROR_CODES = {
-    'BL03002185' => 'A transaction with that number already exists'
+    'BL03002185' => 'A transaction with that number already exists',
+    'BL34000061' => 'Another record with that value already exists'
   }.freeze
 
   def error_codes
@@ -106,6 +107,14 @@ module Intacct
 
   def duplicate_transaction_error_code=(code)
     @duplicate_transaction_error_code = code
+  end
+
+  def duplicate_contact_error_code
+    @duplicate_contact_error_code ||= 'BL34000061'
+  end
+
+  def duplicate_contact_error_code=(code)
+    @duplicate_contact_error_code = code
   end
 
   def customer_fields
