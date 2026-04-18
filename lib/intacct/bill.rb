@@ -27,10 +27,14 @@ module Intacct
         object.vendor = intacct_vendor.object
       end
 
+      content_xml unless @content_xml || @content_xml_block
+
       send_xml('create') do |xml|
         xml.function(controlid: "f1") {
           xml.send("create_bill") {
-            bill_xml xml
+            build_content_xml(xml)
+            run_hook :custom_bill_fields, xml, self
+            run_hook :bill_item_fields, xml, self
           }
         }
       end
@@ -93,25 +97,30 @@ module Intacct
       object.payment.intacct_object_id || "#{intacct_bill_prefix}#{object.payment.id}"
     end
 
-    def bill_xml xml
-      xml.vendorid object.vendor.intacct_system_id
-      xml.datecreated {
-        xml.year object.payment.created_at.strftime("%Y")
-        xml.month object.payment.created_at.strftime("%m")
-        xml.day object.payment.created_at.strftime("%d")
+    def content_xml(&block)
+      if block
+        @content_xml_block = block
+        return self
+      end
+
+      @content_xml = {
+        vendorid:    object.vendor.intacct_system_id,
+        datecreated: {
+          year:  object.payment.created_at.strftime("%Y"),
+          month: object.payment.created_at.strftime("%m"),
+          day:   object.payment.created_at.strftime("%d")
+        },
+        dateposted: {
+          year:  object.payment.created_at.strftime("%Y"),
+          month: object.payment.created_at.strftime("%m"),
+          day:   object.payment.created_at.strftime("%d")
+        },
+        datedue: {
+          year:  object.payment.paid_at.strftime("%Y"),
+          month: object.payment.paid_at.strftime("%m"),
+          day:   object.payment.paid_at.strftime("%d")
+        }
       }
-      xml.dateposted {
-        xml.year object.payment.created_at.strftime("%Y")
-        xml.month object.payment.created_at.strftime("%m")
-        xml.day object.payment.created_at.strftime("%d")
-      }
-      xml.datedue {
-        xml.year object.payment.paid_at.strftime("%Y")
-        xml.month object.payment.paid_at.strftime("%m")
-        xml.day object.payment.paid_at.strftime("%d")
-      }
-      run_hook :custom_bill_fields, xml, self
-      run_hook :bill_item_fields, xml, self
     end
 
     def set_intacct_system_id(_ = nil)
@@ -137,6 +146,26 @@ module Intacct
         end
         if type == "create" && object.payment.respond_to?(:intacct_updated_at)
           object.payment.intacct_updated_at = Time.zone.now
+        end
+      end
+    end
+
+    private
+
+    def build_content_xml(xml)
+      if @content_xml_block
+        @content_xml_block.call(xml)
+      else
+        hash_to_xml(xml, @content_xml)
+      end
+    end
+
+    def hash_to_xml(xml, hash)
+      hash.each do |key, value|
+        if value.is_a?(Hash)
+          xml.send(key) { hash_to_xml(xml, value) }
+        else
+          xml.send(key, value)
         end
       end
     end

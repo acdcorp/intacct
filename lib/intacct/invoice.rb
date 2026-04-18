@@ -27,10 +27,13 @@ module Intacct
         object.vendor = intacct_vendor.object
       end
 
+      content_xml unless @content_xml || @content_xml_block
+
       send_xml('create') do |xml|
         xml.function(controlid: "f1") {
           xml.create_invoice {
-            invoice_xml xml
+            build_content_xml(xml)
+            run_hook :custom_invoice_fields, xml, self
           }
         }
       end
@@ -68,8 +71,8 @@ module Intacct
       return false unless object.invoice.intacct_system_id.present?
 
       send_xml('delete') do |xml|
-        xml.function(controlid: "1") {
-          xml.delete_invoice(externalkey: "false", key: object.invoice.intacct_key)
+        xml.function(controlid: '1') {
+          xml.delete_invoice(externalkey: 'false', key: object.invoice.intacct_key)
         }
       end
 
@@ -81,7 +84,7 @@ module Intacct
       return false unless object.invoice.intacct_key.present?
 
       send_xml('update') do |xml|
-        xml.function(controlid: "1") {
+        xml.function(controlid: '1') {
           xml.update_invoice(key: object.invoice.intacct_key) {
             yield xml
           }
@@ -96,8 +99,8 @@ module Intacct
       # fields = [] if fields.empty?
 
       send_xml('get_list') do |xml|
-        xml.function(controlid: "f1") {
-          xml.get_list(object: "invoice", maxitems: limit) {
+        xml.function(controlid: 'f1') {
+          xml.get_list(object: 'invoice', maxitems: limit) {
             yield xml
           }
         }
@@ -110,19 +113,23 @@ module Intacct
       object.invoice.intacct_object_id || "#{intacct_invoice_prefix}#{object.invoice.id}"
     end
 
-    def invoice_xml xml
-      xml.customerid "#{object.customer.intacct_system_id}"
-      xml.datecreated {
-        xml.year object.invoice.created_at.strftime("%Y")
-        xml.month object.invoice.created_at.strftime("%m")
-        xml.day object.invoice.created_at.strftime("%d")
+    def content_xml(&block)
+      if block
+        @content_xml_block = block
+        return self
+      end
+
+      termname = customer_data&.termname
+      @content_xml = {
+        customerid:  object.customer.intacct_system_id,
+        datecreated: {
+          year:  object.invoice.created_at.strftime("%Y"),
+          month: object.invoice.created_at.strftime("%m"),
+          day:   object.invoice.created_at.strftime("%d")
+        },
+        termname:  termname.present? ? termname : "Net 30",
+        invoiceno: intacct_object_id
       }
-
-      termname = customer_data.termname
-      xml.termname termname.present?? termname : "Net 30"
-
-      xml.invoiceno intacct_object_id
-      run_hook :custom_invoice_fields, xml, self
     end
 
     def set_intacct_system_id(_ = nil)
@@ -190,6 +197,26 @@ module Intacct
         end
         if type == "create" && object.invoice.respond_to?(:intacct_updated_at)
           object.invoice.intacct_updated_at = DateTime.now
+        end
+      end
+    end
+
+    private
+
+    def build_content_xml(xml)
+      if @content_xml_block
+        @content_xml_block.call(xml)
+      else
+        hash_to_xml(xml, @content_xml)
+      end
+    end
+
+    def hash_to_xml(xml, hash)
+      hash.each do |key, value|
+        if value.is_a?(Hash)
+          xml.send(key) { hash_to_xml(xml, value) }
+        else
+          xml.send(key, value)
         end
       end
     end
