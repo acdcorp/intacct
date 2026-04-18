@@ -52,6 +52,8 @@ module Intacct
         #this invoice already exists... lets grab it and force update
         # BL03002185 = A transaction with that number already exists
         if @response.search('//result//errorno').any? { |e| e.content == Intacct.duplicate_transaction_error_code }
+          run_hook :after_send_xml, "create"
+          run_hook :after_create, self
           intacct_invoice_list = Intacct::Invoice.new
           intacct_invoice_list.get_list(1) do |xml|
             xml.filter {
@@ -62,12 +64,10 @@ module Intacct
               }
             }
           end
-          if intacct_invoice_list.response and invoice_key = intacct_invoice_list.response.at("//invoice/key").content
-            set_intacct_key invoice_key
-            run_hook :after_send_xml, "create"
-            run_hook :after_create, self
-            return true
+          if intacct_invoice_list.response && (key_node = intacct_invoice_list.response.at("//invoice/key"))
+            set_intacct_key key_node.content
           end
+          return true
         end
       end
 

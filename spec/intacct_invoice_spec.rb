@@ -429,6 +429,30 @@ describe Intacct::Invoice do
       subject.create
       expect(invoice.intacct_key).to eq '9876'
     end
+
+    def empty_list_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>success</status>
+            <data></data>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    it 'sets intacct_system_id and intacct_created_at even when get_list returns no results' do
+      stub_requests(customer_get_xml, duplicate_xml, empty_list_xml)
+      subject.create
+      expect(invoice.intacct_system_id).to be_present
+      expect(invoice.intacct_created_at).to be_present
+      expect(invoice.intacct_key).to be_nil
+    end
+
+    it 'returns true even when get_list returns no results' do
+      stub_requests(customer_get_xml, duplicate_xml, empty_list_xml)
+      expect(subject.create).to be true
+    end
   end
 
   # ─── vendor failure does not block invoice create ────────────────────────────
