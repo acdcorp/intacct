@@ -68,9 +68,35 @@ describe Intacct::Vendor do
       expect(contact).not_to have_key(:mailaddress)
     end
 
+    context 'contactinfo / contact nesting' do
+      it 'nests contact one level inside contactinfo' do
+        expect(h[:contactinfo]).to be_a(Hash)
+        expect(h[:contactinfo][:contact]).to be_a(Hash)
+        expect(h.dig(:contactinfo, :contact, :contactname)).to eq vendor.contactname
+      end
+
+      it 'does not place contact fields directly under contactinfo' do
+        expect(h[:contactinfo]).not_to have_key(:contactname)
+        expect(h[:contactinfo]).not_to have_key(:email1)
+      end
+    end
+
     context 'with ACH routing number present' do
-      it 'includes paymethod, paymentnotify, achenabled' do
+      it 'defaults paymethod to ACH when object does not define it' do
         expect(h[:paymethod]).to eq 'ACH'
+      end
+
+      it 'uses object.paymethod when the object defines it' do
+        vendor.paymethod = 'Check'
+        expect(Intacct::Vendor.new(vendor).content_xml[:paymethod]).to eq 'Check'
+      end
+
+      it 'falls back to ACH when object.paymethod is blank' do
+        vendor.paymethod = nil
+        expect(Intacct::Vendor.new(vendor).content_xml[:paymethod]).to eq 'ACH'
+      end
+
+      it 'includes paymentnotify, achenabled' do
         expect(h[:paymentnotify]).to eq 'true'
         expect(h[:achenabled]).to eq 'true'
       end
@@ -147,9 +173,11 @@ describe Intacct::Vendor do
       expect(root.at('status').text).to eq 'active'
     end
 
-    it 'renders contactinfo > contact structure' do
+    it 'renders contactinfo > contact two-level structure' do
       expect(root.at('contactinfo > contact > contactname').text).to eq vendor.contactname
       expect(root.at('contactinfo > contact > email1').text).to eq vendor.email
+      # fields must not leak directly onto contactinfo
+      expect(root.at('contactinfo > contactname')).to be_nil
     end
 
     it 'renders mailaddress nested inside contact' do

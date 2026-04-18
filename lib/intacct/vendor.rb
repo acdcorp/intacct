@@ -93,7 +93,7 @@ module Intacct
       }
 
       if object.ach_routing_number.present?
-        @content_xml[:paymethod]            = 'ACH'
+        @content_xml[:paymethod]            = (object.respond_to?(:paymethod) && object.paymethod.present?) ? object.paymethod : 'ACH'
         @content_xml[:paymentnotify]        = 'true'
         @content_xml[:achenabled]           = 'true'
         @content_xml[:achbankroutingnumber] = object.ach_routing_number.to_i
