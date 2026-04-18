@@ -87,13 +87,14 @@ module Intacct
       }
 
       if object.billing_address.present?
-        contact[:mailaddress] = {
+        mailaddr = {
           address1: object.billing_address.address1,
-          address2: object.billing_address.address2,
           city:     object.billing_address.city,
           state:    object.billing_address.state,
           zip:      object.billing_address.zipcode
         }
+        mailaddr[:address2] = object.billing_address.address2 if object.billing_address.address2.present?
+        contact[:mailaddress] = mailaddr
       end
 
       @content_xml = {

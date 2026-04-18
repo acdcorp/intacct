@@ -121,6 +121,15 @@ describe Intacct::Bill do
     end
   end
 
+  describe '#content_xml vendorid fallback' do
+    it 'uses prefix+id when vendor intacct_system_id is blank' do
+      vendor.intacct_system_id = nil
+      b = Intacct::Bill.new(composite)
+      h = b.content_xml
+      expect(h[:vendorid]).to eq "A#{vendor.id}"
+    end
+  end
+
   describe '#content_xml with block' do
     it 'returns self for chaining' do
       b = Intacct::Bill.new(composite)
@@ -440,6 +449,14 @@ describe Intacct::Bill do
     it 'returns true even when get_list returns no results' do
       stub_requests(customer_get_xml, duplicate_xml, empty_list_xml)
       expect(subject.create).to be true
+    end
+
+    it 'intacct_key is set on domain object before after_create fires' do
+      stub_requests(customer_get_xml, duplicate_xml, bill_list_xml)
+      key_at_hook_time = nil
+      subject.after_create { |intacct| key_at_hook_time = intacct.intacct_domain_object.intacct_key }
+      subject.create
+      expect(key_at_hook_time).to eq '5432'
     end
   end
 

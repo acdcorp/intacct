@@ -135,6 +135,16 @@ describe Intacct::Invoice do
     end
   end
 
+  describe '#content_xml customerid fallback' do
+    it 'uses prefix+id when customer intacct_system_id is blank' do
+      customer.intacct_system_id = nil
+      inv = Intacct::Invoice.new(composite)
+      inv.customer_data = OpenStruct.new(termname: "Net 30")
+      h = inv.content_xml
+      expect(h[:customerid]).to eq "C#{customer.id}"
+    end
+  end
+
   describe '#content_xml with block' do
     it 'returns self for chaining' do
       c = Intacct::Invoice.new(composite)
@@ -452,6 +462,14 @@ describe Intacct::Invoice do
     it 'returns true even when get_list returns no results' do
       stub_requests(customer_get_xml, duplicate_xml, empty_list_xml)
       expect(subject.create).to be true
+    end
+
+    it 'intacct_key is set on domain object before after_create fires' do
+      stub_requests(customer_get_xml, duplicate_xml, invoice_list_xml)
+      key_at_hook_time = nil
+      subject.after_create { |intacct| key_at_hook_time = intacct.intacct_domain_object.intacct_key }
+      subject.create
+      expect(key_at_hook_time).to eq '9876'
     end
   end
 

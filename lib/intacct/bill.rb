@@ -53,8 +53,6 @@ module Intacct
         #this bill already exists... lets grab it and force update
         # BL03002185 = A transaction with that number already exists
         if @response.search('//result//errorno').any? { |e| e.content == Intacct.duplicate_transaction_error_code }
-          run_hook :after_send_xml, "create"
-          run_hook :after_create, self
           intacct_bill_list = Intacct::Bill.new
           intacct_bill_list.get_list(1) do |xml|
             xml.filter {
@@ -68,6 +66,8 @@ module Intacct
           if intacct_bill_list.response && (key_node = intacct_bill_list.response.at("//bill/key"))
             set_intacct_key key_node.content
           end
+          run_hook :after_send_xml, "create"
+          run_hook :after_create, self
           return true
         end
       end
@@ -115,7 +115,7 @@ module Intacct
       end
 
       @content_xml = {
-        vendorid:    object.vendor.intacct_system_id,
+        vendorid:    object.vendor.intacct_system_id.present? ? object.vendor.intacct_system_id : "#{intacct_vendor_prefix}#{object.vendor.id}",
         datecreated: {
           year:  object.payment.created_at.strftime("%Y"),
           month: object.payment.created_at.strftime("%m"),

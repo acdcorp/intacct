@@ -83,6 +83,18 @@ describe Intacct::Vendor do
       expect(contact).not_to have_key(:mailaddress)
     end
 
+    it 'omits address2 key from mailaddress when address2 is blank' do
+      vendor.billing_address.address2 = ''
+      mailaddr = Intacct::Vendor.new(vendor).content_xml.dig(:contactinfo, :contact, :mailaddress)
+      expect(mailaddr).not_to have_key(:address2)
+    end
+
+    it 'includes address2 key in mailaddress when address2 is present' do
+      vendor.billing_address.address2 = 'Suite 100'
+      mailaddr = Intacct::Vendor.new(vendor).content_xml.dig(:contactinfo, :contact, :mailaddress)
+      expect(mailaddr[:address2]).to eq 'Suite 100'
+    end
+
     context 'contactinfo / contact nesting' do
       it 'nests contact one level inside contactinfo' do
         expect(h[:contactinfo]).to be_a(Hash)
