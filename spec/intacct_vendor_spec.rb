@@ -427,28 +427,30 @@ describe Intacct::Vendor do
         expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
       end
 
-      it 'raises when ach_routing_number is present but ach_account_number is blank' do
+      it 'does not raise when ach_routing_number is present but ach_account_number is blank' do
         vendor.ach_account_number = nil
-        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
-          .to raise_error(Intacct::Error, /ach_account_number is required.*ach_routing_number is present/)
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
       end
 
-      it 'raises when ach_routing_number is present but ach_account_type is blank' do
+      it 'omits ACH block from content_xml when ach_account_number is blank' do
+        vendor.ach_account_number = nil
+        xml = Intacct::Vendor.new(vendor).content_xml
+        expect(xml[:achbankroutingnumber]).to be_nil
+      end
+
+      it 'does not raise when ach_routing_number is present but ach_account_type is blank' do
         vendor.ach_account_type = nil
-        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
-          .to raise_error(Intacct::Error, /ach_account_type is required.*ach_routing_number is present/)
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
       end
 
-      it 'raises when ach_routing_number is present but ach_remittance_type is blank' do
+      it 'does not raise when ach_routing_number is present but ach_remittance_type is blank' do
         vendor.ach_remittance_type = nil
-        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }
-          .to raise_error(Intacct::Error, /ach_remittance_type is required.*ach_routing_number is present/)
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
       end
 
-      it 'enforces ACH co-validation on update as well' do
+      it 'does not enforce ACH co-validation on update either' do
         vendor.ach_account_number = nil
-        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :update) }
-          .to raise_error(Intacct::Error, /ach_account_number is required.*ach_routing_number is present/)
+        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :update) }.not_to raise_error
       end
     end
 

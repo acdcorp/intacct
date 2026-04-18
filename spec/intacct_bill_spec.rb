@@ -419,6 +419,58 @@ describe Intacct::Bill do
     end
   end
 
+  # ─── vendor failure does not block bill create ───────────────────────────────
+
+  describe '#create vendor failure does not block' do
+    before do
+      payment.intacct_system_id  = nil
+      payment.intacct_created_at = nil
+      vendor.intacct_system_id   = nil  # triggers vendor create path
+      vendor.name                = nil  # makes vendor validate_fields! raise Intacct::Error
+    end
+
+    def stub_requests(*bodies)
+      responses = bodies.map { |b| instance_double(Net::HTTPResponse, code: '200', body: b) }
+      call_idx = [0]
+      allow_any_instance_of(Net::HTTP).to receive(:request) do
+        resp = responses[call_idx[0]] || responses.last
+        call_idx[0] += 1
+        resp
+      end
+    end
+
+    def customer_get_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>success</status>
+            <data><customer></customer></data>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    def bill_create_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>success</status></result></operation>
+        </response>
+      XML
+    end
+
+    it 'returns true even when vendor create raises Intacct::Error' do
+      stub_requests(customer_get_xml, bill_create_xml)
+      expect(intacct_bill.create).to be true
+    end
+
+    it 'sets intacct_system_id on the payment domain object' do
+      stub_requests(customer_get_xml, bill_create_xml)
+      intacct_bill.create
+      expect(payment.intacct_system_id).to be_present
+    end
+  end
+
   # ─── custom_bill_fields hook ─────────────────────────────────────────────────
 
   describe 'custom_bill_fields hook' do

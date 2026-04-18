@@ -105,7 +105,11 @@ module Intacct
         contactinfo: { contact: contact }
       }
 
-      if object.ach_routing_number.present?
+      ach_complete = %i[ach_routing_number ach_account_number ach_account_type ach_remittance_type].all? do |f|
+        object.respond_to?(f) && object.send(f).present?
+      end
+
+      if ach_complete
         @content_xml[:paymethod]            = (object.respond_to?(:paymethod) && object.paymethod.present?) ? object.paymethod : 'ACH'
         @content_xml[:paymentnotify]        = 'true'
         @content_xml[:achenabled]           = 'true'
@@ -145,13 +149,11 @@ module Intacct
       validate_ach!(action)
     end
 
-    def validate_ach!(action)
+    def validate_ach!(_action)
       return unless object.respond_to?(:ach_routing_number) && object.ach_routing_number.present?
 
       %i[ach_account_number ach_account_type ach_remittance_type].each do |field|
-        unless object.respond_to?(field) && object.send(field).present?
-          raise Intacct::Error.new(message: "Vendor##{field} is required for #{action} when ach_routing_number is present")
-        end
+        return unless object.respond_to?(field) && object.send(field).present?
       end
     end
 

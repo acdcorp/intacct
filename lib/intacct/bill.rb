@@ -25,7 +25,11 @@ module Intacct
       # Create vendor if we have one and not in Intacct
       if object.vendor and object.vendor.intacct_system_id.blank?
         intacct_vendor = Intacct::Vendor.new object.vendor
-        intacct_vendor.create
+        begin
+          intacct_vendor.create
+        rescue Intacct::Error
+          # Vendor sync failed; bill proceeds — vendor can be retried separately
+        end
         object.vendor = intacct_vendor.object
       end
 
