@@ -40,8 +40,8 @@ module Intacct
             xml.senderid Intacct.xml_sender_id
             xml.password Intacct.xml_password
             xml.controlid default_control_id
-            xml.uniqueid "false"
-            xml.dtdversion "2.1"
+            xml.uniqueid Intacct.uniq_id
+            xml.dtdversion Intacct.dtdversion
           }
           xml.operation(transaction: "false") {
             xml.authentication {

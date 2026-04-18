@@ -32,7 +32,18 @@ module Intacct
                 :bill_prefix    , :vendor_prefix   ,
                 :customer_prefix, :system_name     ,
                 :service_url    , :customer_fields ,
-                :http_open_timeout, :http_read_timeout
+                :http_open_timeout, :http_read_timeout,
+                :dtdversion, :uniq_id,
+                :intacct_vendor_create_required_fields,
+                :intacct_vendor_update_required_fields
+
+  def intacct_vendor_required_fields
+    @intacct_vendor_required_fields ||= [:id, :name]
+  end
+
+  def intacct_vendor_required_fields=(val)
+    @intacct_vendor_required_fields = val
+  end
 
   def setup
     yield self

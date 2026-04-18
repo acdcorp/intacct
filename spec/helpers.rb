@@ -45,6 +45,8 @@ module Helpers
     @vendor ||= OpenStruct.new({
       id: current_random_id,
       intacct_system_id: current_random_id,
+      name: "Rspec Test",
+      contactname: "Test, Rspec (#{current_random_id})",
       first_name: "Rspec",
       last_name: "Test",
       full_name: "Rspec Test",
@@ -110,6 +112,8 @@ module Helpers
       config.app_user_id    = ENV['INTACCT_USER_ID']
       config.app_company_id = ENV['INTACCT_COMPANY_ID']
       config.app_password   = ENV['INTACCT_PASSWORD']
+      config.dtdversion     = ENV.fetch('INTACCT_DTDVERSION', '2.1')
+      config.uniq_id        = ENV.fetch('INTACCT_UNIQ_ID', 'false')
       yield if block_given?
     end
   end
