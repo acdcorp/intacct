@@ -100,21 +100,19 @@ module Intacct
         contact[:mailaddress] = mailaddr
       end
 
-      @content_xml = {
-        name:        object.name,
-        vendtype:    'Appraiser',
-        taxid:       object.tax_number,
-        billingtype: 'balanceforward',
-        status:      'active',
-        contactinfo: { contact: contact }
-      }
-
       ach_complete = %i[ach_routing_number ach_account_number ach_account_type ach_remittance_type].all? do |f|
         object.respond_to?(f) && object.send(f).present?
       end
 
+      @content_xml = { name: object.name, vendtype: 'Appraiser', taxid: object.tax_number }
+
       if ach_complete
-        @content_xml[:paymethod]            = (object.respond_to?(:paymethod) && object.paymethod.present?) ? object.paymethod : 'ACH'
+        @content_xml[:paymethod] = (object.respond_to?(:paymethod) && object.paymethod.present?) ? object.paymethod : 'ACH'
+      end
+
+      @content_xml.merge!(billingtype: 'balanceforward', status: 'active', contactinfo: { contact: contact })
+
+      if ach_complete
         @content_xml[:paymentnotify]        = 'true'
         @content_xml[:achenabled]           = 'true'
         @content_xml[:achbankroutingnumber] = object.ach_routing_number.to_i

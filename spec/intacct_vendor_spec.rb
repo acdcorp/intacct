@@ -212,6 +212,11 @@ describe Intacct::Vendor do
       expect(root.at('achremittancetype').text).to eq vendor.ach_remittance_type
     end
 
+    it 'renders paymethod before contactinfo (DTD order)' do
+      names = root.children.select(&:element?).map(&:name)
+      expect(names.index('paymethod')).to be < names.index('contactinfo')
+    end
+
     it 'reflects top-level hash mutations' do
       v = Intacct::Vendor.new(vendor)
       v.content_xml[:vendtype] = 'Inspector'
