@@ -115,8 +115,8 @@ module Intacct
       if ach_complete
         @content_xml[:paymentnotify]        = 'true'
         @content_xml[:achenabled]           = 'true'
-        @content_xml[:achbankroutingnumber] = object.ach_routing_number.to_i
-        @content_xml[:achaccountnumber]     = object.ach_account_number.to_i
+        @content_xml[:achbankroutingnumber] = object.ach_routing_number
+        @content_xml[:achaccountnumber]     = object.ach_account_number
         @content_xml[:achaccounttype]       = object.ach_account_type
         @content_xml[:achremittancetype]    = object.ach_remittance_type
       end
