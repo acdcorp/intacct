@@ -101,7 +101,7 @@ module Intacct
       end
 
       ach_complete = %i[ach_routing_number ach_account_number ach_account_type ach_remittance_type].all? do |f|
-        object.respond_to?(f) && object.send(f).present?
+        object.respond_to?(f)
       end
 
       @content_xml = { name: object.name, vendtype: 'Appraiser', taxid: object.tax_number }
@@ -148,15 +148,6 @@ module Intacct
         end
       end
       validate_billing_address!(action) if required.include?(:billing_address)
-      validate_ach!(action)
-    end
-
-    def validate_ach!(_action)
-      return unless object.respond_to?(:ach_routing_number) && object.ach_routing_number.present?
-
-      %i[ach_account_number ach_account_type ach_remittance_type].each do |field|
-        return unless object.respond_to?(field) && object.send(field).present?
-      end
     end
 
     def validate_billing_address!(action)

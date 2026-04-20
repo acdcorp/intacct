@@ -128,9 +128,9 @@ describe Intacct::Vendor do
         expect(h[:achenabled]).to eq 'true'
       end
 
-      it 'converts routing and account numbers to integers' do
-        expect(h[:achbankroutingnumber]).to eq vendor.ach_routing_number.to_i
-        expect(h[:achaccountnumber]).to eq vendor.ach_account_number.to_i
+      it 'reads routing and account numbers as-is from the object' do
+        expect(h[:achbankroutingnumber]).to eq vendor.ach_routing_number
+        expect(h[:achaccountnumber]).to eq vendor.ach_account_number
       end
 
       it 'reads ach_account_type from the object as-is' do
@@ -142,14 +142,13 @@ describe Intacct::Vendor do
       end
     end
 
-    context 'without ACH routing number' do
+    context 'when ach_routing_number is nil' do
       before { vendor.ach_routing_number = nil }
 
-      it 'omits all ACH fields' do
-        %i[paymethod paymentnotify achenabled achbankroutingnumber
-           achaccountnumber achaccounttype achremittancetype].each do |key|
-          expect(Intacct::Vendor.new(vendor).content_xml).not_to have_key(key)
-        end
+      it 'still includes ACH fields (nil → empty tag)' do
+        xml = Intacct::Vendor.new(vendor).content_xml
+        expect(xml).to have_key(:achbankroutingnumber)
+        expect(xml[:achbankroutingnumber]).to be_nil
       end
     end
 
@@ -431,43 +430,19 @@ describe Intacct::Vendor do
       end
     end
 
-    context 'ACH field co-validation (gem-level rule)' do
-      it 'passes when all ACH fields are present' do
-        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
-      end
-
-      it 'skips ACH validation when ach_routing_number is absent' do
-        vendor.ach_routing_number   = nil
-        vendor.ach_account_number   = nil
-        vendor.ach_account_type     = nil
-        vendor.ach_remittance_type  = nil
-        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
-      end
-
-      it 'does not raise when ach_routing_number is present but ach_account_number is blank' do
-        vendor.ach_account_number = nil
-        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
-      end
-
-      it 'omits ACH block from content_xml when ach_account_number is blank' do
-        vendor.ach_account_number = nil
-        xml = Intacct::Vendor.new(vendor).content_xml
-        expect(xml[:achbankroutingnumber]).to be_nil
-      end
-
-      it 'does not raise when ach_routing_number is present but ach_account_type is blank' do
-        vendor.ach_account_type = nil
-        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
-      end
-
-      it 'does not raise when ach_routing_number is present but ach_remittance_type is blank' do
+    context 'ACH fields — no gem-level validation' do
+      it 'does not raise when any ACH field is nil' do
+        vendor.ach_routing_number  = nil
+        vendor.ach_account_number  = nil
+        vendor.ach_account_type    = nil
         vendor.ach_remittance_type = nil
         expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :create) }.not_to raise_error
       end
 
-      it 'does not enforce ACH co-validation on update either' do
-        vendor.ach_account_number = nil
-        expect { Intacct::Vendor.new(vendor).send(:validate_fields!, :update) }.not_to raise_error
+      it 'still includes ACH fields in content_xml even when all are nil' do
+        vendor.ach_routing_number  = nil
+        vendor.ach_account_number  = nil
+        expect(Intacct::Vendor.new(vendor).content_xml).to have_key(:achbankroutingnumber)
       end
     end
 
