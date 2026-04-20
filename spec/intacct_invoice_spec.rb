@@ -473,6 +473,77 @@ describe Intacct::Invoice do
     end
   end
 
+  # ─── #get_list return value ──────────────────────────────────────────────────
+
+  describe '#get_list' do
+    def stub_get_list_response(xml_body)
+      response = instance_double(Net::HTTPResponse, code: '200', body: xml_body)
+      allow_any_instance_of(Net::HTTP).to receive(:request).and_return(response)
+    end
+
+    def success_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>success</status>
+            <data><invoice><key>111</key></invoice></data>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    def error_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>failure</status>
+            <errormessage><error><errorno>GE01234567</errorno><description>Something went wrong</description></error></errormessage>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    let(:list_invoice) { Intacct::Invoice.new }
+
+    it 'returns the Intacct::Invoice instance' do
+      stub_get_list_response(success_xml)
+      result = list_invoice.get_list { |xml| xml.filter {} }
+      expect(result).to be_a(Intacct::Invoice)
+      expect(result).to be list_invoice
+    end
+
+    it 'returns self on success so successful? is true' do
+      stub_get_list_response(success_xml)
+      result = list_invoice.get_list { |xml| xml.filter {} }
+      expect(result.successful?).to be true
+    end
+
+    it 'returns self on error so successful? is false' do
+      stub_get_list_response(error_xml)
+      result = list_invoice.get_list { |xml| xml.filter {} }
+      expect(result.successful?).to be false
+    end
+
+    it 'exposes sent_xml on error' do
+      stub_get_list_response(error_xml)
+      result = list_invoice.get_list { |xml| xml.filter {} }
+      expect(result.sent_xml).to be_a(String)
+      expect(result.sent_xml).not_to be_empty
+    end
+
+    it 'exposes response on error' do
+      stub_get_list_response(error_xml)
+      result = list_invoice.get_list { |xml| xml.filter {} }
+      expect(result.response).to be_a(Nokogiri::XML::Document)
+    end
+
+    it 'exposes records in response on success' do
+      stub_get_list_response(success_xml)
+      result = list_invoice.get_list { |xml| xml.filter {} }
+      expect(result.response.search('//invoice')).not_to be_empty
+    end
+  end
+
   # ─── custom_invoice_fields hook ──────────────────────────────────────────────
 
   describe 'custom_invoice_fields hook' do

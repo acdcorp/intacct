@@ -109,7 +109,7 @@ module Intacct
         }
       end
 
-      successful?
+      self
     end
 
     def intacct_object_id

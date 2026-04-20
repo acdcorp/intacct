@@ -460,6 +460,77 @@ describe Intacct::Bill do
     end
   end
 
+  # ─── #get_list return value ──────────────────────────────────────────────────
+
+  describe '#get_list' do
+    def stub_get_list_response(xml_body)
+      response = instance_double(Net::HTTPResponse, code: '200', body: xml_body)
+      allow_any_instance_of(Net::HTTP).to receive(:request).and_return(response)
+    end
+
+    def success_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>success</status>
+            <data><bill><key>222</key></bill></data>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    def error_xml
+      <<~XML
+        <?xml version="1.0"?>
+        <response><control><status>success</status></control>
+          <operation><result><status>failure</status>
+            <errormessage><error><errorno>GE01234567</errorno><description>Something went wrong</description></error></errormessage>
+          </result></operation>
+        </response>
+      XML
+    end
+
+    let(:list_bill) { Intacct::Bill.new }
+
+    it 'returns the Intacct::Bill instance' do
+      stub_get_list_response(success_xml)
+      result = list_bill.get_list { |xml| xml.filter {} }
+      expect(result).to be_a(Intacct::Bill)
+      expect(result).to be list_bill
+    end
+
+    it 'returns self on success so successful? is true' do
+      stub_get_list_response(success_xml)
+      result = list_bill.get_list { |xml| xml.filter {} }
+      expect(result.successful?).to be true
+    end
+
+    it 'returns self on error so successful? is false' do
+      stub_get_list_response(error_xml)
+      result = list_bill.get_list { |xml| xml.filter {} }
+      expect(result.successful?).to be false
+    end
+
+    it 'exposes sent_xml on error' do
+      stub_get_list_response(error_xml)
+      result = list_bill.get_list { |xml| xml.filter {} }
+      expect(result.sent_xml).to be_a(String)
+      expect(result.sent_xml).not_to be_empty
+    end
+
+    it 'exposes response on error' do
+      stub_get_list_response(error_xml)
+      result = list_bill.get_list { |xml| xml.filter {} }
+      expect(result.response).to be_a(Nokogiri::XML::Document)
+    end
+
+    it 'exposes records in response on success' do
+      stub_get_list_response(success_xml)
+      result = list_bill.get_list { |xml| xml.filter {} }
+      expect(result.response.search('//bill')).not_to be_empty
+    end
+  end
+
   # ─── custom_bill_fields hook ─────────────────────────────────────────────────
 
   describe 'custom_bill_fields hook' do
