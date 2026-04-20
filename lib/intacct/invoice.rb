@@ -97,10 +97,8 @@ module Intacct
       successful?
     end
 
-    def get_list limit=1000
-
-      # fields = [] if fields.empty?
-
+    def get_list(limit = 1000, label: nil)
+      @intacct_label = label
       send_xml('get_list') do |xml|
         xml.function(controlid: 'f1') {
           xml.get_list(object: 'invoice', maxitems: limit) {

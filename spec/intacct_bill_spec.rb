@@ -529,6 +529,24 @@ describe Intacct::Bill do
       result = list_bill.get_list { |xml| xml.filter {} }
       expect(result.response.search('//bill')).not_to be_empty
     end
+
+    it 'sets intacct_action to "get_list" by default' do
+      stub_get_list_response(success_xml)
+      result = list_bill.get_list { |xml| xml.filter {} }
+      expect(result.intacct_action).to eq 'get_list'
+    end
+
+    it 'sets intacct_label to nil by default' do
+      stub_get_list_response(success_xml)
+      result = list_bill.get_list { |xml| xml.filter {} }
+      expect(result.intacct_label).to be_nil
+    end
+
+    it 'sets intacct_label to the provided label' do
+      stub_get_list_response(success_xml)
+      result = list_bill.get_list(label: 'fetch_overdue_bills') { |xml| xml.filter {} }
+      expect(result.intacct_label).to eq 'fetch_overdue_bills'
+    end
   end
 
   # ─── custom_bill_fields hook ─────────────────────────────────────────────────

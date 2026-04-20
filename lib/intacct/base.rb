@@ -100,7 +100,7 @@ module Intacct
     after_delete :delete_intacct_key
     after_send_xml :set_date_time
 
-    attr_accessor :response, :data, :sent_xml, :intacct_action
+    attr_accessor :response, :data, :sent_xml, :intacct_action, :intacct_label
 
     def initialize *params
       params[0] = OpenStruct.new(params[0]) if params[0].is_a? Hash

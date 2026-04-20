@@ -542,6 +542,24 @@ describe Intacct::Invoice do
       result = list_invoice.get_list { |xml| xml.filter {} }
       expect(result.response.search('//invoice')).not_to be_empty
     end
+
+    it 'sets intacct_action to "get_list" by default' do
+      stub_get_list_response(success_xml)
+      result = list_invoice.get_list { |xml| xml.filter {} }
+      expect(result.intacct_action).to eq 'get_list'
+    end
+
+    it 'sets intacct_label to nil by default' do
+      stub_get_list_response(success_xml)
+      result = list_invoice.get_list { |xml| xml.filter {} }
+      expect(result.intacct_label).to be_nil
+    end
+
+    it 'sets intacct_label to the provided label' do
+      stub_get_list_response(success_xml)
+      result = list_invoice.get_list(label: 'fetch_overdue_invoices') { |xml| xml.filter {} }
+      expect(result.intacct_label).to eq 'fetch_overdue_invoices'
+    end
   end
 
   # ─── custom_invoice_fields hook ──────────────────────────────────────────────
