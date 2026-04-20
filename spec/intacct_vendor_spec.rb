@@ -227,6 +227,14 @@ describe Intacct::Vendor do
       v.content_xml.dig(:contactinfo, :contact)[:email1] = 'changed@example.com'
       expect(build_xml(v).at('email1').text).to eq 'changed@example.com'
     end
+
+    it 'renders address2 between address1 and city when present' do
+      vendor.billing_address.address2 = 'Suite 100'
+      root = build_xml(Intacct::Vendor.new(vendor))
+      names = root.search('mailaddress').first.children.select(&:element?).map(&:name)
+      expect(names.index('address1')).to be < names.index('address2')
+      expect(names.index('address2')).to be < names.index('city')
+    end
   end
 
   # ─── XML output — block path ─────────────────────────────────────────────────

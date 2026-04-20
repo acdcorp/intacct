@@ -90,13 +90,13 @@ module Intacct
       }
 
       if object.billing_address.present?
-        mailaddr = {
-          address1: object.billing_address.address1,
-          city:     object.billing_address.city,
-          state:    object.billing_address.state,
-          zip:      object.billing_address.zipcode
-        }
+        mailaddr = { address1: object.billing_address.address1 }
         mailaddr[:address2] = object.billing_address.address2 if object.billing_address.address2.present?
+        mailaddr.merge!(
+          city:  object.billing_address.city,
+          state: object.billing_address.state,
+          zip:   object.billing_address.zipcode
+        )
         contact[:mailaddress] = mailaddr
       end
 
