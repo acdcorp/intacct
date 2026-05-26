@@ -2,12 +2,16 @@ require "intacct/version"
 require 'net/http'
 require 'nokogiri'
 require 'hooks'
+require 'logger'
 require "intacct/base"
 require "intacct/error"
 require "intacct/customer"
 require "intacct/vendor"
 require "intacct/invoice"
 require "intacct/bill"
+
+warn "[DEPRECATION] Intacct gem (v0.0.3): Object#blank?/present? will be removed in v0.1.0. " \
+     "Require 'active_support/core_ext/object/blank' instead." unless defined?(ActiveSupport)
 
 class Object
   def blank?
@@ -23,11 +27,129 @@ module Intacct
   extend self
 
   attr_accessor :xml_sender_id  , :xml_password    ,
-                :app_user_id    , :app_company_id  , :app_password ,
-                :invoice_prefix , :bill_prefix     ,
-                :vendor_prefix  , :customer_prefix, :system_name
+                :app_user_id    , :app_company_id  ,
+                :app_password   , :invoice_prefix  ,
+                :bill_prefix    , :vendor_prefix   ,
+                :customer_prefix, :system_name     ,
+                :service_url    ,
+                :http_open_timeout, :http_read_timeout,
+                :dtdversion, :uniq_id,
+                :intacct_vendor_create_required_fields,
+                :intacct_vendor_update_required_fields,
+                :intacct_customer_create_required_fields,
+                :intacct_customer_update_required_fields,
+                :intacct_invoice_create_required_fields,
+                :intacct_invoice_update_required_fields,
+                :intacct_bill_create_required_fields,
+                :intacct_bill_update_required_fields
+
+  def intacct_vendor_required_fields
+    @intacct_vendor_required_fields ||= [:name]
+  end
+
+  def intacct_vendor_required_fields=(val)
+    @intacct_vendor_required_fields = val
+  end
+
+  def intacct_vendor_billing_address_required_fields
+    @intacct_vendor_billing_address_required_fields ||= %i[address1 city state zipcode]
+  end
+
+  def intacct_vendor_billing_address_required_fields=(val)
+    @intacct_vendor_billing_address_required_fields = val
+  end
+
+  def intacct_customer_required_fields
+    @intacct_customer_required_fields ||= [:id, :name]
+  end
+
+  def intacct_customer_required_fields=(val)
+    @intacct_customer_required_fields = val
+  end
+
+  def intacct_invoice_required_fields
+    @intacct_invoice_required_fields ||= [:created_at]
+  end
+
+  def intacct_invoice_required_fields=(val)
+    @intacct_invoice_required_fields = val
+  end
+
+  def intacct_bill_required_fields
+    @intacct_bill_required_fields ||= [:created_at, :paid_at]
+  end
+
+  def intacct_bill_required_fields=(val)
+    @intacct_bill_required_fields = val
+  end
+
+  # Frozen built-in registry — never mutated directly
+  BUILT_IN_ERROR_CODES = {
+    'BL03002185' => 'A transaction with that number already exists',
+    'BL34000061' => 'Another record with that value already exists'
+  }.freeze
+
+  def error_codes
+    @error_codes ||= BUILT_IN_ERROR_CODES.dup
+  end
+
+  def error_codes=(hash)
+    @error_codes = hash
+  end
+
+  def register_error_code(code, description)
+    error_codes[code] = description
+  end
+
+  def duplicate_transaction_error_code
+    @duplicate_transaction_error_code ||= 'BL03002185'
+  end
+
+  def duplicate_transaction_error_code=(code)
+    @duplicate_transaction_error_code = code
+  end
+
+  def duplicate_contact_error_code
+    @duplicate_contact_error_code ||= 'BL34000061'
+  end
+
+  def duplicate_contact_error_code=(code)
+    @duplicate_contact_error_code = code
+  end
+
+  def customer_fields
+    @customer_fields ||= [
+      :customerid,
+      :name,
+      :termname,
+      :auto_employee,
+      :auto_commission_start_date,
+      :auto_commission_end_date,
+      :auto_commission_rate,
+      :property_employee,
+      :property_commission_start_date,
+      :property_commission_end_date,
+      :property_commission_rate,
+      :subro_employee,
+      :subro_commission_start_date,
+      :subro_commission_end_date,
+      :subro_commission_rate
+    ]
+  end
+
+  def customer_fields=(val)
+    @customer_fields = val
+  end
 
   def setup
     yield self
+  end
+
+  def logger
+    @logger ||= ::Logger.new($stdout).tap { |l| l.level = ::Logger::WARN }
+  end
+
+  def logger=(log)
+    @logger = log
   end
 end

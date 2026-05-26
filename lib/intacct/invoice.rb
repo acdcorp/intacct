@@ -1,44 +1,41 @@
+# frozen_string_literal: true
 module Intacct
   class Invoice < Intacct::Base
     attr_accessor :customer_data
     define_hook :custom_invoice_fields
 
     def create
-      return false if object.invoice.intacct_system_id.present?
+      raise Intacct::Error.new(message: 'Invoice already created on intacct') if object.invoice.intacct_system_id.present?
+
+      validate_fields!(:create)
 
       # Need to create the customer if one doesn't exist
       intacct_customer = Intacct::Customer.new object.customer
       unless object.customer.intacct_system_id.present?
-        unless intacct_customer.create
-          raise Intacct::Error.new message: 'Could not create customer',
-            sent_xml: intacct_customer.sent_xml, response: intacct_customer.response
-          #raise 'Could not create customer'
-        end
+        intacct_customer.create
+        object.customer = intacct_customer.object
+        intacct_customer = Intacct::Customer.new object.customer
+        @customer_data = intacct_customer.data
       end
 
-      if intacct_customer.get
+      if @customer_data.nil? && intacct_customer.get
         object.customer = intacct_customer.object
         @customer_data = intacct_customer.data
-      else
-        raise Intacct::Error.new message: 'Could not grab Intacct customer data',
-            sent_xml: intacct_customer.sent_xml, response: intacct_customer.response
       end
 
-      # Create vendor if we have one and not in Intacct
-      if object.vendor and object.vendor.intacct_system_id.blank?
+      if object.vendor && object.vendor.intacct_system_id.blank?
         intacct_vendor = Intacct::Vendor.new object.vendor
-        if intacct_vendor.create
-          object.vendor = intacct_vendor.object
-        else
-          raise Intacct::Error.new message: 'Could not create vendor',
-            sent_xml: intacct_vendor.sent_xml, response: intacct_vendor.response
-        end
+        intacct_vendor.create
+        object.vendor = intacct_vendor.object
       end
+
+      content_xml unless @content_xml || @content_xml_block
 
       send_xml('create') do |xml|
         xml.function(controlid: "f1") {
           xml.create_invoice {
-            invoice_xml xml
+            build_content_xml(xml)
+            run_hook :custom_invoice_fields, xml, self
           }
         }
       end
@@ -49,7 +46,8 @@ module Intacct
 
       if !success
         #this invoice already exists... lets grab it and force update
-        if resp = @response.at('//result//errorno') and resp.content == "PL01000127"
+        # BL03002185 = A transaction with that number already exists
+        if @response.search('//result//errorno').any? { |e| e.content == Intacct.duplicate_transaction_error_code }
           intacct_invoice_list = Intacct::Invoice.new
           intacct_invoice_list.get_list(1) do |xml|
             xml.filter {
@@ -60,12 +58,12 @@ module Intacct
               }
             }
           end
-          if intacct_invoice_list.response and invoice_key = intacct_invoice_list.response.at("//invoice/key").content
-            set_intacct_key invoice_key
-            run_hook :after_send_xml, "create"
-            run_hook :after_create
-            return true
+          if intacct_invoice_list.response && (key_node = intacct_invoice_list.response.at("//invoice/key"))
+            set_intacct_key key_node.content
           end
+          run_hook :after_send_xml, "create"
+          run_hook :after_create, self
+          return true
         end
       end
 
@@ -76,8 +74,8 @@ module Intacct
       return false unless object.invoice.intacct_system_id.present?
 
       send_xml('delete') do |xml|
-        xml.function(controlid: "1") {
-          xml.delete_invoice(externalkey: "false", key: object.invoice.intacct_key)
+        xml.function(controlid: '1') {
+          xml.delete_invoice(externalkey: 'false', key: object.invoice.intacct_key)
         }
       end
 
@@ -89,7 +87,7 @@ module Intacct
       return false unless object.invoice.intacct_key.present?
 
       send_xml('update') do |xml|
-        xml.function(controlid: "1") {
+        xml.function(controlid: '1') {
           xml.update_invoice(key: object.invoice.intacct_key) {
             yield xml
           }
@@ -99,54 +97,44 @@ module Intacct
       successful?
     end
 
-    def get_list limit=1000
-
-      # fields = [] if fields.empty?
-
+    def get_list(limit = 1000, label: nil)
+      @intacct_label = label
       send_xml('get_list') do |xml|
-        xml.function(controlid: "f1") {
-          xml.get_list(object: "invoice", maxitems: limit) {
+        xml.function(controlid: 'f1') {
+          xml.get_list(object: 'invoice', maxitems: limit) {
             yield xml
           }
         }
       end
 
-      successful?
+      self
     end
 
     def intacct_object_id
-      "#{intacct_invoice_prefix}#{object.invoice.id}"
+      object.invoice.intacct_object_id || "#{intacct_invoice_prefix}#{object.invoice.id}"
     end
 
-    def invoice_xml xml
-      xml.customerid "#{object.customer.intacct_system_id}"
-      xml.datecreated {
-        xml.year object.invoice.created_at.strftime("%Y")
-        xml.month object.invoice.created_at.strftime("%m")
-        xml.day object.invoice.created_at.strftime("%d")
+    def intacct_domain_object
+      object&.invoice
+    end
+
+    def content_xml(&block)
+      if block
+        @content_xml_block = block
+        return self
+      end
+
+      termname = customer_data&.termname
+      @content_xml = {
+        customerid:  object.customer.intacct_system_id.present? ? object.customer.intacct_system_id : "#{intacct_customer_prefix}#{object.customer.id}",
+        datecreated: {
+          year:  object.invoice.created_at.strftime("%Y"),
+          month: object.invoice.created_at.strftime("%m"),
+          day:   object.invoice.created_at.strftime("%d")
+        },
+        termname:  termname.present? ? termname : "Net 30",
+        invoiceno: intacct_object_id
       }
-
-      termname = customer_data.termname
-      xml.termname termname.present?? termname : "Net 30"
-
-      xml.invoiceno intacct_object_id
-      run_hook :custom_invoice_fields, xml
-    end
-
-    def set_intacct_system_id
-      object.invoice.intacct_system_id = intacct_object_id
-    end
-
-    def set_intacct_key key
-      object.invoice.intacct_key = key
-    end
-
-    def delete_intacct_system_id
-      object.invoice.intacct_system_id = nil
-    end
-
-    def delete_intacct_key
-      object.invoice.intacct_key = nil
     end
 
     def get_employee_id
@@ -160,8 +148,8 @@ module Intacct
       end
 
       #make sure valid time
-      return if Time.strptime(customer_data.send("#{system}_commission_start_date"),"%m/%d/%Y")>Time.now
-      return if Time.strptime(customer_data.send("#{system}_commission_end_date"),"%m/%d/%Y")<Time.now
+      return if Time.strptime(customer_data.send("#{system}_commission_start_date"),"%m/%d/%Y") > Time.zone.now
+      return if Time.strptime(customer_data.send("#{system}_commission_end_date"),"%m/%d/%Y") < Time.zone.now
 
       customer_data.send("#{system}_employee")
     end
@@ -191,10 +179,45 @@ module Intacct
       end
     end
 
-    def set_date_time type
-      if %w(create update delete).include? type
-        if object.invoice.respond_to? :"intacct_#{type}d_at"
-          object.invoice.send("intacct_#{type}d_at=", DateTime.now)
+    private
+
+    def validate_fields!(action)
+      object_id_present = (object.invoice.respond_to?(:intacct_object_id) && object.invoice.intacct_object_id.present?) ||
+                          (object.invoice.respond_to?(:id) && object.invoice.id.present?)
+      unless object_id_present
+        raise Intacct::Error.new(message: "Invoice requires id or intacct_object_id for #{action}")
+      end
+
+      required = case action
+                 when :create
+                   Intacct.intacct_invoice_create_required_fields ||
+                     Intacct.intacct_invoice_required_fields
+                 when :update
+                   Intacct.intacct_invoice_update_required_fields ||
+                     Intacct.intacct_invoice_create_required_fields ||
+                     Intacct.intacct_invoice_required_fields
+                 end
+      required.each do |field|
+        unless object.invoice.respond_to?(field) && object.invoice.send(field).present?
+          raise Intacct::Error.new(message: "Invoice##{field} is required for #{action} but blank or missing")
+        end
+      end
+    end
+
+    def build_content_xml(xml)
+      if @content_xml_block
+        @content_xml_block.call(xml)
+      else
+        hash_to_xml(xml, @content_xml)
+      end
+    end
+
+    def hash_to_xml(xml, hash)
+      hash.each do |key, value|
+        if value.is_a?(Hash)
+          xml.send(key) { hash_to_xml(xml, value) }
+        else
+          xml.send(key, value)
         end
       end
     end
